@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2011 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="Oracle BPM 10g Installation">
+
+    <import file="ant-imports.xml"/>
+
+    <target name="validate.obpm.install">
+		<available file="${obpm.install.file}" property="available.obpm.install" />
+		<fail unless="available.obpm.install">Invalid configuration: ${obpm.install.file} is invalid or does not exist.</fail>
+    </target>
+    
+	<target name="install_obpm" description="Install Oracle BPM 10g" depends="validate.obpm.install">
+		<if>
+			<isset property="obpm.home"/>
+			<then>
+				<echo message="Installing Oracle BPM with the following settings:"/>
+				<echo message="================================================"/>
+				<echo message="OBPM Home: ${obpm.home}" />
+				<echo message="================================================"/>
+				<echo>Please be patient the silent installer may take several minutes to run.</echo>
+				<exec executable="${obpm.install.file}">
+					<arg line="-DUSER_INSTALL_DIR=&quot;${obpm.home}&quot; -i silent"/>
+				</exec>
+				<available file="${obpm.home}" property="obpm.home.exists" />
+				<fail unless="obpm.home.exists">OBPM Install Failed... ${obpm.home} was not created.</fail>   
+				<echo message="================================================"/>
+				<echo message="================================================"/>
+				<echo message="Oracle BPM Install Finished"/>
+				<echo message="================================================"/>
+				<echo message="================================================"/>
+			</then>
+			<else><fail>obpm.home property must be set</fail></else>
+		</if>
+	</target>   
+
+	<target name="test">
+			<echo>PWD: ${obpm.admin.password}</echo>
+			<echo>PWD: ${obpm.sys.password}</echo>
+			<echo>PWD: ${obpm.db.password}</echo>
+			<echo>PWD: ${obpm.Password}</echo>
+			<echo>PWD: ${obpm.db.engine.password}</echo>
+			<echo>PWD: ${obpm.db.dir.password}</echo>
+	</target>
+
+	<target name="configure_obpm" depends="populate.obpm.template" description="Configure Oracle BPM 10g database and applications">
+		<mkdir dir="${obpm.ears.dir}/engine"/>
+		<mkdir dir="${obpm.ears.dir}/webapps"/>
+		<echo message="================================================"/>
+		<echo message="Configuring Oracle BPM...."/>
+		<echo message="================================================"/>
+		<echo>Please be patient this may take several minutes.</echo>
+		<if>
+			<os family="unix"/>
+			<then>
+				<exec executable="sh" failonerror="true">
+					<arg line="${obpm.home}/bin/obpmconfigwizard ${obpm.template} --silent"/>
+				</exec>
+			</then>
+			<else>
+				<exec executable="${obpm.home}/bin/obpmconfigwizard.exe" failonerror="true">
+					<arg line="${obpm.template} --silent"/>
+				</exec>
+			</else>
+		</if>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<echo message="Oracle BPM Configured Successfully."/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<delete file="${obpm.template}" />
+	</target>
+
+	<target name="obtain.obpm.config">
+		<property name="obpm.ears.dir" value="${obpm.home}/ears" />
+		<property name="obpm.engines.dir" value="${obpm.home}/engines" />
+		<input message="Enter the system database user password: " addproperty="obpm.sys.password" />
+	</target>
+
+	<target name="populate.obpm.template" depends="obtain.obpm.config">
+	
+		<condition property="obpm.silent.props.exist">
+		    <and>
+				<isset property="obpm.admin.user"/>
+				<isset property="obpm.admin.password"/>
+				<isset property="obpm.db.dir.host"/>
+				<isset property="obpm.db.engine.host"/>
+				<isset property="obpm.db.dir.username"/>
+				<isset property="obpm.db.dir.port"/>
+				<isset property="obpm.db.engine.port"/>
+				<isset property="obpm.db.dir.sid"/>
+				<isset property="obpm.db.engine.sid"/>
+				<isset property="obpm.db.dir.password"/>
+				<isset property="obpm.organisation.id"/>
+				<isset property="obpm.sys.password"/>
+				<isset property="obpm.db.engine.username"/>
+				<isset property="obpm.db.engine.password"/>
+				<isset property="obpm.engines.dir"/>
+				<isset property="obpm.ears.dir"/>
+				<isset property="obpm.engine.id"/>
+				<isset property="obpm.home"/>
+		    </and>
+		</condition>
+		
+		<fail unless="obpm.silent.props.exist">Could not populate ${obpm.template} file - Some required properties are missing.</fail>
+		
+		<mkdir dir="tmp" />
+		<property name="obpm.template" value="tmp/obpm.template" />
+		
+		<copy file="resources/obpm.template" tofile="${obpm.template}" overwrite="true" />
+		<replace file="${obpm.template}">
+			<replacefilter token="@@OBPM_USER@@" value="${obpm.admin.user}"/>
+			<replacefilter token="@@OBPM_PASSWORD@@" value="${obpm.admin.password}"/>
+			<replacefilter token="@@OBPM_DIR_DB_HOST@@" value="${obpm.db.dir.host}"/>
+			<replacefilter token="@@OBPM_ENGINE_DB_HOST@@" value="${obpm.db.engine.host}"/>
+			<replacefilter token="@@OBPM_DIR_USER@@" value="${obpm.db.dir.username}"/>
+			<replacefilter token="@@OBPM_DIR_DB_PORT@@" value="${obpm.db.dir.port}"/>
+			<replacefilter token="@@OBPM_ENGINE_DB_PORT@@" value="${obpm.db.engine.port}"/>
+			<replacefilter token="@@OBPM_DIR_DB_SID@@" value="${obpm.db.dir.sid}"/>
+			<replacefilter token="@@OBPM_ENGINE_DB_SID@@" value="${obpm.db.engine.sid}"/>
+			<replacefilter token="@@OBPM_DIR_PASSWORD@@" value="${obpm.db.dir.password}"/>
+			<replacefilter token="@@ORGANISATION_ID@@" value="${obpm.organisation.id}"/>
+			<replacefilter token="@@DB_SYS_PASSWORD@@" value="${obpm.sys.password}"/>
+			<replacefilter token="@@OBPMN_ENGINE_USER@@" value="${obpm.db.engine.username}"/>
+			<replacefilter token="@@OBPM_ENGINE_PASSWORD@@" value="${obpm.db.engine.password}"/>
+			<replacefilter token="@@ENGINES_DIRECTORY@@" value="${obpm.engines.dir}"/>
+			<replacefilter token="@@EARS_DIRECTORY@@" value="${obpm.ears.dir}"/>
+			<replacefilter token="@@ENGINE_ID@@" value="${obpm.engine.id}"/>
+		</replace>
+		
+	</target>
+
+</project>

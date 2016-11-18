@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2010 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="Repository Creation Utility">
+
+    <import file="ant-imports.xml"/>
+    
+    <target name="validate.rcu">
+        <if>
+            <os family="windows"/>
+            <then>
+                <available file="${rcu.home}/bin/rcu.bat" property="available.rcu.home"/>
+            </then>
+			
+            <else>
+                <available file="${rcu.home}/bin/rcu" property="available.rcu.home"/>
+            </else>
+        </if>
+        <fail unless="available.rcu.home">Invalid configuration: ${rcu.home} is invalid or does not exist.</fail>
+    </target>
+
+    <target name="run_rcu_legacy_ant" depends="fixing.rcu.script, validate.rcu" description="Runs Repository Creation Utility">
+
+        <input message="Enter the sys database password: " addproperty="sys.password"/>
+
+        <condition property="drop.rcu.schemas.value">
+			<equals arg1="${drop.rcu.schemas}" arg2="true" casesensitive="false" />
+		</condition>
+	        <if>
+	        	<isset property="drop.rcu.schemas.value"/>
+	        <then>
+	        	<echo> ${line.separator} "drop.rcu.schemas" property is set to "TRUE". So executing "DropRepository" command with rcu.</echo>
+	        	<var name="rcu.cmdline.var" value="-silent -dropRepository -databaseType ORACLE -connectString ${soa.sys.db.url} -dbUser sys -dbRole sysdba -schemaPrefix ${soa.schema.prefix}" />
+	        </then>
+	        <else>
+	        	<echo> ${line.separator} "drop.rcu.schemas" property is not set. So executing "CreateRepository" command with rcu by default.</echo>
+	        	<var name="rcu.cmdline.var" value=" -silent -createRepository -connectString ${soa.sys.db.url} -dbUser sys -dbRole sysdba -schemaPrefix ${soa.schema.prefix}" />
+			</else>        	
+			</if>          
+        <var name="rcu.pwd.input.var" value="${sys.password}" />
+
+        <for list="${rcu.db.components}" param="component" delimiter=",">
+            <sequential>
+                <var name="rcu.cmdline.var" value= "${rcu.cmdline.var} -component @{component}" />
+                <var name="rcu.pwd.input.var" value= "${rcu.pwd.input.var}${line.separator}${rcu.db.component.@{component}.password}" />
+            </sequential>
+        </for>
+
+        <property name="rcu.cmdline" value= "${rcu.cmdline.var}" />
+        <property name="rcu.pwd.input" value= "${rcu.pwd.input.var}" />
+
+        <if>
+            <and>
+                <isset property="soa.sys.db.url" />
+                <isset property="rcu.db.components" />
+            </and>
+            <then>
+                <if>
+                    <os family="windows"/>
+                    <then>
+                        <exec dir="${rcu.home}/bin" executable="cmd.exe" inputstring="${rcu.pwd.input}">
+                            <arg line="/C rcu.bat ${rcu.cmdline}" />
+                        </exec>
+                    </then>
+                    <else>
+						<echo message="${rcu.pwd.input}" />
+						<echo message="${rcu.cmdline}" />
+                        <exec executable="sh" inputstring="${rcu.pwd.input}">
+                            <arg line="${rcu.home}/bin/rcu ${rcu.cmdline}" />
+                        </exec>
+                    </else>
+                </if>
+            </then>
+            <else>
+                <echo>Ignoring RCU step. Ensure soa.sys.db.url and rcu.db.components properties are set.</echo>
+            </else>
+        </if>
+        
+    </target>
+	
+    <target name="fixing.rcu.script">
+	  <property environment="env"/>
+	  <fail unless="env.JAVA_HOME" message="JAVA_HOME not set."/>
+      <if>
+        <os family="unix"/>
+          <then>
+		  	<exec executable="chmod" dir="${rcu.home}" failonerror="true">
+		      <arg line="-R 0755 ." />
+		  	</exec>
+            <replaceregexp file="${rcu.home}/bin/rcu" match="JRE_DIR/bin/java" replace="JAVA_HOME/bin/java" byline="true"/>
+          </then>
+      </if>
+    </target>
+	
+
+  
+    
+</project>

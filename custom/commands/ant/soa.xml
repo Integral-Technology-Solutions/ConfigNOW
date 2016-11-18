@@ -1,0 +1,184 @@
+<project name="Deploy SOA Ant Tasks" basedir=".">
+		
+	<taskdef resource="net/sf/antcontrib/antlib.xml"/>
+	<property name="base.dir" location="${ConfigNOW.home}" />
+	<property name="tmp.dir" location="${ConfigNOW.home}/config/environments/tmp/" />
+	<property name="install.tmp.dir" location="/tmp/" />
+	<property name="resources.dir" location="${ConfigNOW.home}/config/environments/resources/" />	
+	<property name="ssh.id" location="/home/oracle/.ssh/id_rsa" />
+        <!-- Password is only required if a trust relationship has not been established, probably best to use
+             an encrypted ConfigNOW property rather than setting it here if doing this seriously, 
+             but this is just for testing -->
+	<property name="ssh.password" value="oracle" />		
+	<property name="weblogic.lib.dir" location="${wls.oracle.home}/${wls.name}/server/lib" />	
+	<property name="weblogic.bin.dir" location="${wls.oracle.home}/${wls.name}/server/bin"/>	
+		
+	<target name="soa" depends="clean, domain_create, fix_jms, package_install, package_domain, deploy_tasks, jms_soa_patch" description="Complete build config for the SOA environment">   		
+        <echo message="Configuring the SOA ${ConfigNOW.environment} environment" />
+        <echo message="wls.oracle.home=${wls.oracle.home}" />
+    </target>
+			
+	<target name="clean">
+		<echo message="Removing ${wls.domain.dir}/${wls.domain.name}"/>
+		<delete dir="${wls.domain.dir}/${wls.domain.name}" />
+		<echo message="Removing ${tmp.dir}"/>
+		<delete dir="${tmp.dir}" />
+	</target>
+
+    <target name="domain_create">
+        <echo message="Creating the ${wls.domain.name} for primary server ${soa.machine1.host}" />
+		<echo message="Found ConfigNOW home dir at ${confignow.home}" />
+	    <exec dir="${confignow.home}" executable="${confignow.home}/ConfigNOW.sh">
+	      <arg line="create_domain ${ConfigNOW.environment} ${ConfigNOW.configuration}" />
+	    </exec>
+    </target>
+
+    <target name="fix_jms">
+        <echo message="Fixing a bug in the JMS creation for ${wls.domain.name}" />
+	    <exec dir="${confignow.home}" executable="${confignow.home}/ConfigNOW.sh">
+	      <arg line="jms_fix ${ConfigNOW.environment} ${ConfigNOW.configuration}" />
+	    </exec>
+    </target>
+    
+    
+    <target name="package_install">
+        <echo message="Packaging up the Oracle Fusion Middleware Install at ${wls.oracle.home} " />
+        <tar destfile="${install.tmp.dir}/middleware.tar" basedir="${wls.oracle.home}"/>
+    </target>
+
+    
+    <target name="package_domain">
+        <echo message="Packaging up the domain ${wls.domain.name} at ${wls.domain.dir} " />
+        <tar destfile="${wls.domain.dir}/${wls.domain.name}.tar" basedir="${wls.domain.dir}" includes="${wls.domain.name}/**"/>
+    </target>
+	
+	<target name="deploy_tasks">    
+		<for list="${deploy_hosts}" param="project">
+			<sequential>
+				<var name="host" unset="true"/>
+				<property name="host" value="@{project}"/>
+				<antcall target="install_product"></antcall>
+				<antcall target="nodemanager"></antcall>	
+				<antcall target="install_domain"></antcall>
+			</sequential>				
+		</for>			
+	</target>		
+	
+	<target name="nodemanager">
+		<mkdir dir="${tmp.dir}"/>
+		<mkdir dir="${tmp.dir}/${host}"/>		
+	    <copy todir="${tmp.dir}/${host}" failonerror="No" overwrite="true">
+           <filterset>			
+              <filter token="soa.as.host" value="${soa.as.host}"/>
+              <filter token="wls.admin.listener.port" value="${wls.admin.listener.port}"/>
+              <filter token="wls.admin.username" value="${wls.admin.username}"/>				  				  
+              <filter token="wls.admin.password" value="${wls.admin.password}"/>				  				  				  
+              <filter token="wls.domain.dir" value="${wls.domain.dir}"/>				  				  				  
+              <filter token="wls.domain.name" value="${wls.domain.name}"/>	
+              <filter token="nodemanager.listener.address" value="${host}"/>				    				  				  				  				  
+		  </filterset>
+	      <fileset dir="${resources.dir}">
+			  <include name="enrollDomain.py"/>
+			  <include name="enrollDomain.sh"/>		
+			  <include name="startNM.sh"/>					    
+ 			  <include name="nodemanager.domains"/>
+ 			  <include name="nodemanager.properties"/>			  
+	      </fileset>
+	    </copy> 
+	  <scp file="${tmp.dir}/${host}/nodemanager.properties" todir="oracle@${host}:${nodemanager.home}" keyfile="${ssh.id}" password="${ssh.password}" passphrase="" trust="yes"/>  	
+	  <scp file="${tmp.dir}/${host}/nodemanager.domains" todir="oracle@${host}:${nodemanager.home}" keyfile="${ssh.id}" password="${ssh.password}" passphrase="" trust="yes"/>  		  
+	</target>
+	
+	
+    <target name="transfer_domain">
+        <echo message="Transfering ${wls.domain.name}.tar to environment ${host}" />
+        <scp file="${wls.domain.dir}/${wls.domain.name}.tar" todir="oracle@${host}:${wls.domain.dir}" keyfile="${ssh.id}" password="${ssh.password}" passphrase="" trust="yes"/>  	
+    </target>
+	
+    <target name="untar_domain" depends="transfer_domain">
+        <echo message="Installing ${wls.domain.name}.tar to ${host} " />
+		<sshexec host="${host}" keyfile="${ssh.id}" username="oracle" passphrase="" trust="yes" command="cd ${wls.domain.dir}; rm -rf ${wls.domain.dir}/${wls.domain.name}; tar xvf ${wls.domain.dir}/${wls.domain.name}.tar;"/>	
+    </target>
+	
+    <target name="install_domain" depends="untar_domain">
+        <echo message="Setting up Node Manager scripts" />
+				<scp file="${tmp.dir}/${host}/enrollDomain.py" todir="oracle@${host}:${wls.domain.dir}/${wls.domain.name}/bin/nodemanager" keyfile="${ssh.id}" password="${ssh.password}" passphrase="" trust="yes"  />
+				<scp file="${tmp.dir}/${host}/enrollDomain.sh" todir="oracle@${host}:${wls.domain.dir}/${wls.domain.name}/bin/nodemanager" keyfile="${ssh.id}" password="${ssh.password}" passphrase="" trust="yes"  />
+				<scp file="${tmp.dir}/${host}/startNM.sh" todir="oracle@${host}:${wls.domain.dir}/${wls.domain.name}/bin/nodemanager" keyfile="${ssh.id}" password="${ssh.password}" passphrase="" trust="yes"  />				
+				<sshexec host="${host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" command="chmod 750 ${wls.domain.dir}/${wls.domain.name}/bin/nodemanager/enrol*;"/>
+				<sshexec host="${host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" command="chmod 750 ${wls.domain.dir}/${wls.domain.name}/bin/nodemanager/startNM.sh;"/>				
+				<sshexec host="${host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" command="chmod 750 ${wls.domain.dir}/${wls.domain.name}/startWebLogic.sh;"/>								
+				<sshexec host="${host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" command="chmod 750 ${wls.domain.dir}/${wls.domain.name}/bin/*.sh;"/>				
+				<sshexec host="${host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" command="mkdir -p ${wls.oracle.home}/user_projects/applications/soa_tst_domain"/>	
+				<scp file="${wls.oracle.home}/user_projects/applications/${wls.domain.name}/em.ear" todir="oracle@${host}:${wls.oracle.home}/user_projects/applications/${wls.domain.name}/em.ear" keyfile="${ssh.id}" password="${ssh.password}" passphrase="" trust="yes"  />				
+												
+    </target>
+    
+    <target name="transfer_install">
+        <echo message="Transfering middleware.tar to environment ${host}" />
+        <scp file="${install.tmp.dir}/middleware.tar" todir="oracle@${host}:${install.tmp.dir}" keyfile="${ssh.id}" password="${ssh.password}" passphrase="" trust="yes"/>
+    </target>
+	
+    <target name="untar_install" depends="transfer_install">
+        <echo message="Installing middleware.tar to ${host} " />
+		<sshexec host="${host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" passphrase="" trust="yes" command="cd ${wls.oracle.home}; rm -rf ${wls.oracle.home}/*; tar xvf ${install.tmp.dir}/middleware.tar;"/>	
+    </target>
+
+    <target name="install_product" depends="untar_install">
+        <echo message="Complete post install activities" />        
+    </target>
+    
+    <target name="start_admin">
+        <echo message="Starting the Admin Server" />
+		<sshexec host="${soa.as.host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" failonerror="false" timeout="3600" command="cd ${wls.domain.dir}/${wls.domain.name}; ./startWebLogic.sh &amp;"/>
+		<echo message="Waiting for Admin server to start...  Will wait 5 minutes"/>
+		<waitfor maxwait="5" maxwaitunit="minute" checkevery="500">
+				<socket server="${soa.as.host}" port="7100"/>				
+		</waitfor>
+		
+    </target>
+	
+    <target name="start_nodemanager" depends="start_admin" > 
+        <echo message="Starting Node Manager" />
+		<for list="${deploy_hosts}" param="host">			
+			<sequential>
+		<sshexec host="@{host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" 
+			command="cd  ${wls.domain.dir}/${wls.domain.name}/bin/nodemanager; ln -s ${weblogic.bin.dir}/startNodeManager.sh startNodeManager.sh; ./enrollDomain.sh;"/>
+<!--		<sshexec host="@{host}" keyfile="${ssh.id}" username="oracle" trust="yes" failonerror="false" timeout="3600" 
+			command="cd /ora/product/Middleware/wlserver_10.3/server/bin; ./startNodeManager.sh $*;"/>		-->
+			</sequential>				
+		</for>					
+    </target>
+	
+	
+    <target name="domain_configure" depends="start_nodemanager">
+        <echo message="Configuring domain" />
+	    <exec dir="${confignow.home}" executable="${confignow.home}/ConfigNOW.sh">
+	      <arg line="configure_domain ${ConfigNOW.environment} ${ConfigNOW.configuration}" />
+	    </exec>
+    </target>
+	
+	
+    <target name="jms_soa_patch" depends="domain_configure">
+ 		<echo message="Stopping the Admin Server" />
+		<sshexec host="${soa.as.host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" failonerror="false" command="cd ${wls.domain.dir}/${wls.domain.name}/bin; ./stopWebLogic.sh;"/>		
+		
+		<echo message="Applying SOA JMS patches" />	
+	    <sshexec host="${soa.host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" 
+	      command="source ${wls.domain.dir}/${wls.domain.name}/bin/setDomainEnv.sh; cd ${soa.home}/bin; java weblogic.WLST soa-createUDD.py --domain_home ${wls.domain.dir}/${wls.domain.name} --soacluster soa_cluster"/>
+		<sshexec host="${soa.host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" 
+	      command="source ${wls.domain.dir}/${wls.domain.name}/bin/setDomainEnv.sh; cd ${soa.home}/bin; java weblogic.WLST soa-createUDD.py --domain_home ${wls.domain.dir}/${wls.domain.name} --bamcluster bam_cluster --extend true;"/>
+		  
+        <echo message="Starting the Admin Server" />
+  		<sshexec host="${soa.as.host}" keyfile="${ssh.id}" username="oracle" password="${ssh.password}" trust="yes" failonerror="false" timeout="3600" command="cd ${wls.domain.dir}/${wls.domain.name}; ./startWebLogic.sh &amp;"/>
+  		<echo message="Waiting for Admin server to start...  Will wait 5 minutes"/>
+  		<waitfor maxwait="5" maxwaitunit="minute" checkevery="500">
+  				<socket server="${soa.as.host}" port="7100"/>				
+  		</waitfor>
+		
+        <echo message="Fixing OSB deployment of the singleton services for ${wls.domain.name}" />
+	    <exec dir="${confignow.home}" executable="${confignow.home}/ConfigNOW.sh">
+	      <arg line="osb_fix ${ConfigNOW.environment} ${ConfigNOW.configuration}" />
+	    </exec>
+    </target>	
+</project>

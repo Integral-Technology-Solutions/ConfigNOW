@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+# ============================================================================
+#
+# Copyright (c) 2007-2010 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+-->
+
+<project name="example" basedir=".">
+
+<target name="install_jboss" description="Installs JBoss to nominated directory">
+	<available file="${redhat.jboss.zip}" property="redhat.installer.exists" />
+    <fail unless="redhat.installer.exists">jboss Installation Failed... ${redhat.jboss.zip} not available. Please verify redhat.jboss.zip property. </fail>   
+    <unzip src="${redhat.jboss.zip}" dest="${redhat.jboss.root.dir}"/>
+	<echo message = "jboss installed successfully at ${redhat.jboss.root.dir} " />
+    <exec dir="${redhat.jboss.home}/bin" executable="cmd" spawn="true">
+        <arg line="/c add-user.bat admin admin"/>
+  </exec>
+    
+</target>
+<target name="add_user" description="Adds user to jboss">
+<echo message = "Adding management user as specified by redhat.jboss.admin.user and redhat.jboss.admin.password properties" />
+<exec dir="${redhat.jboss.home}/bin" executable="cmd" spawn="true">
+        <arg line="/c add-user.bat ${redhat.jboss.admin.user} ${redhat.jboss.admin.password}"/>
+  </exec>
+  </target>
+
+<taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
+
+<target name="start_jboss" description="command to start jboss">
+<condition property="jboss.running">
+	<socket server="${redhat.jboss.admin.hostname}" port="${redhat.jboss.admin.port}"/>
+</condition>
+<fail message="server already running on ${redhat.jboss.admin.hostname}:${redhat.jboss.admin.port}" if="jboss.running"/>
+        <echo>---------------------------------------</echo>
+        <echo>- starting jboss</echo>
+        <echo>---------------------------------------</echo>
+        
+<condition property="isWindows">
+  <os family="windows"/>
+</condition> 
+<if>
+ <isset property="isWindows" />
+ <then>
+ <exec dir="${redhat.jboss.home}/bin" executable="cmd" spawn="true">
+        <arg line="/c standalone.bat"/>
+  </exec> 
+   <!--<exec executable="${redhat.jboss.home}/bin/standalone.bat" />-->
+   </then>
+   <else>
+    <exec executable="chmod">
+    <arg value="755"/>
+    <arg value="-R"/>
+    <arg value="${redhat.jboss.home}"/>
+  </exec>
+ <exec dir="${redhat.jboss.home}/bin" executable="sh" spawn="true">
+        <arg line="/c standalone.sh"/>
+  </exec>
+ </else>
+</if>
+   
+	<waitfor maxwait="60" maxwaitunit="second" timeoutproperty="server.start.failed">
+        <socket server="${redhat.jboss.admin.hostname}" port="${redhat.jboss.admin.port}"/>
+    </waitfor>
+	<fail message="server failed to startup" if="server.start.failed"/>
+	<echo message="server started successfully"/>
+</target>
+
+<presetdef name="jboss-cli">
+      
+
+      <java jar="${redhat.jboss.home}/jboss-modules.jar" fork="true" failonerror="true">
+        <arg line="-mp ${redhat.jboss.home}/modules org.jboss.as.cli --connect --controller=${redhat.jboss.admin.hostname}:${redhat.jboss.mgt.port} --user=${redhat.jboss.admin.user} --password=${redhat.jboss.admin.password}" />
+      </java>
+</presetdef>
+
+<target name="stop_jboss" description="command to stop jboss">
+<condition property="not.jboss.running">
+<not>
+	<socket server="${redhat.jboss.admin.hostname}" port="${redhat.jboss.admin.port}"/>
+</not>
+</condition>
+<fail message="server is not running" if="not.jboss.running"/>
+        <echo>---------------------------------------</echo>
+        <echo>- stopping jboss</echo>
+        <echo>---------------------------------------</echo>
+	
+	<jboss-cli failonerror="true">
+        <arg line="--connect controller=${redhat.jboss.admin.hostname}:${redhat.jboss.mgt.port} --command=:shutdown" />
+      </jboss-cli>
+	       
+	<echo message="server stopped successfully"/>
+</target>
+
+<target name="restart_jboss" description="command to restart jboss">
+<condition property="not.jboss.running">
+<not>
+	<socket server="${redhat.jboss.admin.hostname}" port="${redhat.jboss.admin.port}"/>
+</not>
+</condition>
+<fail message="server is not running" if="not.jboss.running"/>
+        <echo>---------------------------------------</echo>
+        <echo>- Restarting jboss</echo>
+        <echo>---------------------------------------</echo>
+	<antcall target="stop_jboss"/>
+	<antcall target="start_jboss"/>		
+	<echo message="server has been restarted successfully"/>
+</target>
+
+<target name="deploy_jboss_app" description="Deploy web application to jboss server">
+	<condition property="not.jboss.running">
+	<not>
+	        <socket server="${redhat.jboss.admin.hostname}" port="${redhat.jboss.admin.port}"/>
+	        </not>
+	        </condition>
+	        <fail message="server is not running. Please start the server first they try to deploy." if="not.jboss.running"/>
+
+    <property name="deployed.war" value="${redhat.jboss.appdeployment.dir}/${redhat.jboss.appdeployment.filename}" />
+
+    <delete file="${deployed.war}.deployed" failonerror="false" />
+    <waitfor maxwait="10" maxwaitunit="second">
+        <available file="${deployed.war}.undeployed" />
+    </waitfor>
+    <delete dir="${deployed.war}" />
+
+    <copy file="${redhat.jboss.appdeployment.war.location}/${redhat.jboss.appdeployment.filename}" todir="${redhat.jboss.appdeployment.dir}" />
+
+    <echo>start deployment ...</echo>
+    <touch file="${deployed.war}.dodeploy" />
+
+    <waitfor maxwait="10" maxwaitunit="second">
+        <available file="${deployed.war}.deployed" />
+    </waitfor>
+    <echo>${redhat.jboss.appdeployment.filename} is deployed successfully !</echo>
+</target>
+
+<target name ="remote_deploy_app" description="remotely deploy jboss application">
+<fail message="${redhat.jboss.appdeployment.war.location}/${redhat.jboss.appdeployment.filename} file not found. Please verify the location again.">
+		<condition>
+					<not>
+						<available file="${redhat.jboss.appdeployment.war.location}/${redhat.jboss.appdeployment.filename}"/>
+					</not>
+		</condition>
+</fail>
+
+	<jboss-cli failonerror="true">
+         <arg line="'deploy --name=${redhat.jboss.appdeployment.filename} --force ${redhat.jboss.appdeployment.war.location}/${redhat.jboss.appdeployment.filename}'" />
+	</jboss-cli>
+	<echo>${redhat.jboss.appdeployment.filename} is deployed successfully !</echo>
+  
+</target>
+
+<target name ="remote_undeploy_app" description="remotely undeploy jboss application">
+<jboss-cli failonerror="true">
+         <arg line="'undeploy --name=${redhat.jboss.appdeployment.filename}'" />
+      </jboss-cli>
+	<echo>${redhat.jboss.appdeployment.filename} is undeployed successfully !</echo>
+</target>
+
+<target name ="list_deployed_apps" description="List Deployed jboss applications">
+<condition property="not.jboss.running">
+<not>
+        <socket server="${redhat.jboss.admin.hostname}" port="${redhat.jboss.admin.port}"/>
+        </not>
+        </condition>
+        <fail message="server is not running, please start the server first" if="not.jboss.running"/>
+
+<echo message="Listing Deployed applications from jBoss server ....."/>
+<jboss-cli failonerror="false">
+         <arg line="'deploy -l'" />
+      </jboss-cli>
+	
+</target>
+
+<target name="redeploy_jboss_app" description="Redeploy web application in the jboss Server">
+<property name="deployed.war" value="${redhat.jboss.appdeployment.dir}/${redhat.jboss.appdeployment.filename}" />
+<condition property="no.deployment">
+<not>
+ <available file="${deployed.war}.deployed" />
+ </not>
+ </condition>
+  <fail message="Deployment not found with name ${deployed.war}" if="no.deployment"/>
+  
+	<condition property="not.jboss.running">
+	<not>
+	        <socket server="${redhat.jboss.admin.hostname}" port="${redhat.jboss.admin.port}"/>
+	        </not>
+	        </condition>
+	        <fail message="Server is not running.Please start the server first and try again. " if="not.jboss.running"/>
+
+	<property name="deployed.war" value="${redhat.jboss.appdeployment.dir}/${redhat.jboss.appdeployment.filename}" />
+	
+	<touch file="${deployed.war}.dodeploy"/>
+	<waitfor maxwait="10" maxwaitunit="second">
+        <available file="${deployed.war}.deployed" />
+    </waitfor>
+	<echo>${redhat.jboss.appdeployment.filename} is redeployed successfully !</echo>
+</target>
+
+<target name="undeploy_jboss_app" description="Remove web application from jboss server">
+<property name="deployed.war" value="${redhat.jboss.appdeployment.dir}/${redhat.jboss.appdeployment.filename}" />
+<condition property="no.deployment">
+<not>
+ <available file="${deployed.war}.deployed" />
+ </not>
+ </condition>
+  <fail message="Deployment not found with name ${deployed.war}" if="no.deployment"/>
+ 
+	<condition property="not.jboss.running">
+	<not>
+	        <socket server="${redhat.jboss.admin.hostname}" port="${redhat.jboss.admin.port}"/>
+	        </not>
+	        </condition>
+	        <fail message="Server is not running, Please start the server first and then try again." if="not.jboss.running"/>
+
+
+	
+    <delete file="${deployed.war}.deployed"/>
+	<waitfor maxwait="10" maxwaitunit="second">
+        <available file="${deployed.war}.deployed" />
+    </waitfor>
+	<echo>${redhat.jboss.appdeployment.filename} is undeployed successfully !</echo>
+</target>
+
+<target name="run_cli" description="runs the custom jboss cli supplied">
+<condition property="no.file">
+<not>
+ <available file="${redhat.jboss.custom.cli.script}" />
+ </not>
+ </condition>
+  <fail message="Supplied cli script file not found ${redhat.jboss.custom.cli.script}" if="no.file"/>
+  
+<jboss-cli failonerror="true">
+<arg line="'--file=${redhat.jboss.custom.cli.script}'"/>
+</jboss-cli>	
+</target>
+
+<target name="configure_datasource" description="configures datasource onto jboss server">
+<jboss-cli failonerror="true">
+	 <arg line="'deploy --name=oracle --force ../../resources/ojdbc6.jar'"/>
+</jboss-cli>	 
+
+<jboss-cli failonerror="false">
+         <arg line="'data-source remove --name=${redhat.jboss.jdbc.MyOracleDS.name}'" />
+ </jboss-cli>
+ 
+<jboss-cli failonerror="true">
+         <arg line="'data-source add --name=${redhat.jboss.jdbc.MyOracleDS.name} --jndi-name=java\:jboss\/datasources\/${redhat.jboss.jdbc.MyOracleDS.Jndi} --driver-name=oracle --driver-class=oracle.jdbc.driver.OracleDriver --connection-url=${redhat.jboss.jdbc.MyOracleDS.url};DB_CLOSE_DELAY\=-1'" />
+ </jboss-cli>
+<echo message="Datasource ${redhat.jboss.jdbc.MyOracleDS.name} successfully deployed"/>
+<echo message="Enabling Datasource ${redhat.jboss.jdbc.MyOracleDS.name}"/>	  
+<jboss-cli failonerror="true">
+	  <arg line="'data-source enable --name=${redhat.jboss.jdbc.MyOracleDS.name}'" />
+	  </jboss-cli>
+
+
+
+</target>
+
+
+</project>

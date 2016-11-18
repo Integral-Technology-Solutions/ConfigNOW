@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Silent installer option: -mode=silent -silent_xml=C:\bea\silent.xml -->
+
+<!-- Specify values for each data-value name as follows: 
+
+     BEAHOME            Complete pathname to the BEA Home directory that 
+                        will contain this installation.
+
+     USER_INSTALL_DIR   Complete pathname to the product installation 
+                        directory in which to install the software.
+
+     WLW_INSTALL_DIR    Complete pathname for the directory where you 
+			want to install BEA Workshop for WebLogic Platform.
+
+     INSTALL_MERCURY_PROFILING_TOOLS 
+                        Optionally install Mercury profiling tools.
+                        Possible values are "true","yes","false" 
+                        and "no". The default is "true".
+
+
+     INSTALL_NODE_MANAGER_SERVICE  Install Node Manager as a Windows 
+                                   service. The default is "no".
+                                   Requires Administrator privileges.
+
+     NODEMGR_PORT       Node Manager listen port number. If none specified,
+                        installer uses default port 5556. 
+                        INSTALL_NODE_MANAGER_SERVICE must be set to "yes"
+
+     COMPONENT_PATHS    Components and subcomponents to be installed.
+                        To install multiple components, separate the components
+                        with a bar (|).
+                        To install subcomponents, specify a 
+                        component/subcomponent combination. For example,
+                        to install Web Server Plug-Ins, use
+                        "WebLogic Server/Web Server Plug-Ins".
+
+     INSTALL_SHORTCUT_IN_ALL_USERS_FOLDER   
+                        The Windows Start menu folder in which you want the 
+                        Start menu shortcuts created.
+                        The user performing the installation must have 
+                        Administrator privileges to install the shortcuts 
+                        in the All Users folder.
+                        Possible values:
+                        true/yes  The shortcuts are created in 
+                                  the All Users folder (default)
+                        false/no  The shortcuts are created in 
+                                  the local user's folder    
+
+     See the Installation Guide for more information.                  --> 
+ 
+<bea-installer> 
+ 
+  <input-fields>
+      <data-value name="BEAHOME"                  value="@@BEA_HOME@@" />
+      <data-value name="WLS_INSTALL_DIR"         value="@@BEA_HOME@@/@@WL_HOME@@" />
+      <data-value name="ALSB_INSTALL_DIR"         value="@@BEA_HOME@@/@@OSB_HOME@@" />
+      <data-value name="INSTALL_NODE_MANAGER_SERVICE"   value="yes"  />
+      <data-value name="NODEMGR_PORT"                   value="@@NM_PORT@@" />
+      <data-value name="COMPONENT_PATHS" value="WebLogic Server|Oracle Service Bus/Service Bus Examples" />
+ 
+</input-fields> 
+</bea-installer>

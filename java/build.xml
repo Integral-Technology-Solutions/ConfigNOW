@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="windows-1252"?>
+
+<!--
+    Document   : build.xml
+    Created on : 4 October 2012, 4:43 PM
+    Author     : KPowe
+    Description:
+        Builds utility classes for ConfigNOW, to ensure we don't get caught out with specific versions of Java.
+-->
+
+<project name="Build Java Utility Classes" default="install">
+
+    <property name="dir.build" value="tmp"/>
+    <property name="dir.src" value="src"/>
+    <property name="file.jar" value="ConfigNOWUtils.jar"/>
+
+    <target name="init">
+        <delete dir="${dir.build}" failonerror="false"/>
+        <mkdir dir="${dir.build}"/>
+    </target>
+
+    <target name="compile" depends="init">
+        <javac srcdir="${dir.src}" destdir="${dir.build}"/>
+    </target>
+
+    <target name="package" depends="compile">
+        <jar basedir="${dir.build}" destfile="${file.jar}"/>
+    </target>
+
+    <target name="install" depends="package">
+        <move file="${file.jar}" todir="../core/engine/lib" overwrite="true"/>
+    </target>
+    
+</project>
+

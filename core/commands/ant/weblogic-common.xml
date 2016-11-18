@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="WebLogicCommon" basedir=".">
+	
+	<import file="ant-imports.xml"/>
+	<import file="common/build_common.xml"/>
+	
+	<target name="validate.admin.config">
+		<echo message="WebLogic Domain Name: ${wls.domain.name}"/>
+		<echo message="WebLogic Domain Directory: ${wls.domain.dir}"/>
+		<echo message="WebLogic Admin Server Name: ${wls.admin.name}"/>
+		<echo message="WebLogic Admin Listener Address: ${wls.admin.listener.address}"/>
+		<echo message="WebLogic Admin Listener Port: ${wls.admin.listener.port}"/>
+		<if>
+			<not>
+				<and>
+					<isset property="wls.admin.name" />
+					<isset property="wls.domain.dir" />
+					<isset property="wls.domain.name" />
+					<isset property="wls.admin.listener.address" />
+					<isset property="wls.admin.listener.port" />
+				</and>
+			</not>
+			<then>
+				<fail message="Required configuration properties are missing."/>
+			</then>
+		</if>
+	</target>
+
+	<target name="validate.install.config">
+		<echo message="Fusion Middleware Home: ${wls.oracle.home}"/>
+		<echo message="Java Home: ${wls.domain.javahome}"/>
+		<echo message="WebLogic Name: ${wls.name}"/>
+		<if>
+			<not>
+				<and>
+					<isset property="wls.oracle.home" />
+					<isset property="wls.domain.javahome" />
+					<isset property="wls.name" />					
+				</and>
+			</not>
+			<then>
+				<fail message="Required configuration properties are missing."/>
+			</then>
+		</if>
+	</target>
+	
+	<!-- - - - - - - - - - - - - - - - - - - -
+ 	Start WLS AdminServer
+ 	- - - - - - - - - - - - - - - - - - - -->
+	<target name="start_wls_admin" description="Start WebLogic admin server" depends="validate.admin.config">
+		
+		<antcall target="start-server">
+			<param name="server.host" value="${wls.admin.listener.address}" />
+			<param name="server.port" value="${wls.admin.listener.port}" />
+			<param name="server.name" value="${wls.admin.name}" />
+			<param name="server.dir" value="${wls.domain.dir}/${wls.domain.name}" />
+			<param name="server.waittime" value="${wls.admin.startup.timeout}" />
+		</antcall>
+	</target>
+
+	<!-- - - - - - - - - - - - - - - - - - - -
+ 	Stop WLS AdminServer
+ 	- - - - - - - - - - - - - - - - - - - -->
+	<target name="stop_wls_admin" description="Stop WebLogic admin server" depends="validate.admin.config">
+		<antcall target="stop-server">
+			<param name="server.name" value="${wls.admin.name}" />
+			<param name="server.dir" value="${wls.domain.dir}/${wls.domain.name}" />
+			<param name="server.host" value="${wls.admin.listener.address}" />
+			<param name="server.port" value="${wls.admin.listener.port}" />
+		</antcall>
+	</target>
+	
+	
+	<!-- - - - - - - - - - - - - - - - - - - -
+ 	Shutdown all servers in the domain
+ 	- - - - - - - - - - - - - - - - - - - -->
+	<target name="shutdown_domain_servers" description="Shutdown all servers in the domain" depends="validate.install.config, validate.admin.config">
+		<antcall target="shutting_servers_down"></antcall>
+	</target>
+	
+	
+	<!-- - - - - - - - - - - - - - - - - - - -
+ 	Configure the Nodemanager
+ 	- - - - - - - - - - - - - - - - - - - -->
+	<target name="configure_nodemanager" description="Configure the WebLogic Nodemanager" depends="validate.install.config, validate.admin.config">
+
+		<property name="nodemanager.home.loc" value="${wls.oracle.home}/${wls.name}/common/nodemanager" />
+        <if>
+            <not>
+				<available file="${nodemanager.home.loc}" />
+			</not>
+            <then>
+                <property name="nodemanager.home" value="${wls.domain.dir}/${wls.domain.name}/nodemanager" />
+             </then>
+            <else>
+            
+                <property name="nodemanager.home" value="${wls.oracle.home}/${wls.name}/common/nodemanager" />
+            
+            </else>
+        </if>
+		<property name="nodemanager.server.bin" value="${wls.oracle.home}/${wls.name}/server/bin" />
+		<property name="nodemanager.props" value="${nodemanager.home}/nodemanager.properties" />		
+		
+		<if>
+			<or>
+				<contains string="${nodemanager.home}" substring="\" />
+				<contains string="${wls.domain.javahome}" substring="\" />
+			</or>
+			<then>
+				<fail message="Properties containing directory paths cannot use backslash. Use forward slash instead (e.g. C:/oracle instead of C:\oracle)" />
+			</then>
+		</if>
+		
+		<if>
+			<not>
+				<available file="${wls.domain.javahome}" />
+			</not>
+			<then>
+				<fail message="JAVA_HOME: ${wls.domain.javahome} does not exist." />
+			</then>
+		</if>
+		
+		<if>
+			<not>
+				<available file="${nodemanager.home}" />
+			</not>
+			<then>
+				<fail message="NODEMANAGER_HOME: ${nodemanager.home} does not exist." />
+			</then>
+		</if>
+		
+		<!-- Copy nodemanager.properties template from ConfigNOW if it does not exist -->
+		<!-- Copy nodemanager.properties template from ConfigNOW if it does not exist -->
+		<available file="${nodemanager.props}" property="available.nodemanager.props" />
+		<if>
+			<not>
+				<isset property="available.nodemanager.props" />
+			</not>
+			<then>
+				<copy file="resources/nodemanager1034.template" tofile="${nodemanager.home}/nodemanager.properties" />
+			</then>
+		</if>
+		
+		<!-- Backup files -->
+		<tstamp>
+			<format property="DATESTAMP" pattern="yyyy-MM-dd-sss-HHmmssSSS"/>
+        </tstamp>
+		<copy file="${nodemanager.home}/nodemanager.properties" tofile="${nodemanager.home}/nodemanager_auto-backup_${DATESTAMP}.properties" overwrite="true" />
+		<copy file="${nodemanager.home}/nodemanager.domains" tofile="${nodemanager.home}/nodemanager_auto-backup_${DATESTAMP}.domains" overwrite="true" />
+		<if>	
+			<os family="windows"/>
+				<then>
+					<copy file="${nodemanager.server.bin}/startNodeManager.cmd" tofile="${nodemanager.server.bin}/startNodeManager.cmd.auto-backup_${DATESTAMP}" />
+				</then>
+				<else>
+					<copy file="${nodemanager.server.bin}/startNodeManager.sh" tofile="${nodemanager.server.bin}/startNodeManager.sh.auto-backup_${DATESTAMP}" />
+				</else>
+		</if>
+		<echo>Setting up nodemanager home ${nodemanager.home}</echo>
+		
+		<!-- Check to see if the .domain file already has this domain defined, if not add it -->
+		<propertyfile file="${nodemanager.home}/nodemanager.domains">
+			<entry key="${wls.domain.name}" value="${wls.domain.dir}/${wls.domain.name}" />
+		</propertyfile>
+		
+		<if>
+			<equals arg1="${nodemanager.startscriptenabled}" arg2="true" casesensitive="false"/>
+			<then>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(StartScriptEnabled=).*"
+						   replace="\1true"
+						   byline="true" />	
+			</then>
+			<else>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(StartScriptEnabled=).*"
+						   replace="\1false"
+						   byline="true" />						
+			</else>
+		</if>
+		<if>
+			<equals arg1="${nodemanager.crashrecovery}" arg2="true" casesensitive="false"/>
+			<then>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(CrashRecoveryEnabled=).*"
+						   replace="\1true"
+						   byline="true" />	
+			</then>
+			<else>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(CrashRecoveryEnabled=).*"
+						   replace="\1false"
+						   byline="true" />	
+			</else>
+		</if>
+		<if>
+			<equals arg1="${nodemanager.domain.dir.sharing}" arg2="true" casesensitive="false"/>
+			<then>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(DomainsDirRemoteSharingEnabled=).*"
+						   replace="\1true"
+						   byline="true" />	
+			</then>
+			<else>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(DomainsDirRemoteSharingEnabled=).*"
+						   replace="\1false"
+						   byline="true" />	
+			</else>
+		</if>
+		<if>
+			<isset property="nodemanager.loglimit"/>
+			<then>			       
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(LogLimit=).*"
+						   replace="\1${nodemanager.loglimit}"
+						   byline="true" />
+			</then>
+		</if>
+		<if>
+			<isset property="nodemanager.logcount"/>
+			<then>			       
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(LogCount=).*"
+						   replace="\1${nodemanager.logcount}"
+						   byline="true" />
+			</then>
+		</if>
+		<if>
+			<isset property="nodemanager.listener.port"/>
+			<then>			       
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(ListenPort=).*"
+						   replace="\1${nodemanager.listener.port}"
+						   byline="true" />
+			</then>
+		</if>
+		<if>
+			<isset property="nodemanager.listener.address"/>
+			<then>			       
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(ListenAddress=).*"
+						   replace="\1${nodemanager.listener.address}"
+						   byline="true" />
+			</then>
+		</if>
+		<if>	
+			<os family="windows"/>
+			<then>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+					match="(StartScriptName=).*"
+					replace="\1startWebLogic.cmd"
+					byline="true" />
+			</then>
+			<else>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+					match="(StartScriptName=).*"
+					replace="\1startWebLogic.sh"
+					byline="true" />
+			</else>
+		</if>
+		<if>
+			<equals arg1="${nodemanager.secure.listener}" arg2="true" casesensitive="false"/>
+			<then>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(SecureListener=).*"
+						   replace="\1true"
+						   byline="true" />	
+			</then>
+			<else>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+						   match="(SecureListener=).*"
+						   replace="\1false"
+						   byline="true" />	
+			</else>
+		</if>		
+		<if>
+			<isset property="wls.domain.javahome" />
+			<then>
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+					match="(javaHome=).*"
+					replace="\1${wls.domain.javahome}"
+					byline="true" />
+				<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+					match="(JavaHome=).*"
+					replace="\1${wls.domain.javahome}/jre"
+					byline="true" />
+			</then>
+		</if>		
+
+		<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+			match="(DomainsFile=).*"
+			replace="\1${nodemanager.home}/nodemanager.domains"
+			byline="true" />
+		<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+			match="(NodeManagerHome=).*"
+			replace="\1${nodemanager.home}"
+			byline="true" />
+		<replaceregexp file="${nodemanager.home}/nodemanager.properties"
+			match="(LogFile=).*"
+			replace="\1${nodemanager.home}/nodemanager.log"
+			byline="true" />
+				
+		<if>
+			<isset property="nodemanager.arguments"/>
+			<then>
+				<if>	
+					<os family="windows"/>
+					<then>
+						<replaceregexp file="${nodemanager.server.bin}/startNodeManager.cmd"
+							match="(^set JAVA_OPTIONS=).*"
+							replace=""
+							byline="true" />
+						<replaceregexp file="${nodemanager.server.bin}/startNodeManager.cmd"
+							match="(SETLOCAL).*"
+							replace="\1${line.separator}set JAVA_OPTIONS=%JAVA_OPTIONS% &quot;${nodemanager.arguments}&quot;"
+							byline="true" /> 
+					</then>
+					<else>
+						<replaceregexp file="${nodemanager.server.bin}/startNodeManager.sh"
+							match="(^export JAVA_OPTIONS=).*"
+							replace=""
+							byline="true" /> 
+						<replaceregexp file="${nodemanager.server.bin}/startNodeManager.sh"
+							match="(unset JAVA_VM MEM_ARGS).*"
+							replace="\1${line.separator}export JAVA_OPTIONS=&quot;$${JAVA_OPTIONS} ${nodemanager.arguments}&quot;"
+							byline="true" /> 
+					</else>
+				</if>
+			</then>
+		</if>
+	
+	</target>
+	
+</project>

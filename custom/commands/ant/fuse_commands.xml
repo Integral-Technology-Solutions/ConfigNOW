@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+# ============================================================================
+#
+# Copyright (c) 2007-2010 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+-->
+
+<project name="example" basedir=".">
+  <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+    <classpath>
+      <pathelement location="../../engine/lib/ant-contrib-1.0b1.jar" />
+    </classpath>
+  </taskdef>
+
+<target name="status_fuse" description="Check the status of JBoss Fuse.">
+  <echo>Checking JBoss Fuse Status</echo>
+  <condition property="fuse.running">
+   <socket server="${redhat.fuse.admin.hostname}" port="${redhat.fuse.admin.port}"/>
+ </condition>
+ <if>
+  <equals arg1='${fuse.running}' arg2="true"/>
+  <then>
+    <echo message="Server running on ${redhat.fuse.admin.hostname}:${redhat.fuse.admin.port}"/>
+  </then>
+  <else>
+  <echo message="Server not running."/>
+</else>
+</if>
+</target>
+
+  <target name="install_fuse" description="Installs JBoss Fuse to nominated directory">
+   <available file="${redhat.fuse.zip}" property="redhat.installer.exists" />
+   <fail unless="redhat.installer.exists">JBoss Fuse Installation Failed... ${redhat.fuse.zip} not available. Please verify redhat.jboss.zip property. </fail>   
+   <unzip src="${redhat.fuse.zip}" dest="${redhat.fuse.root.dir}"/>
+   <available file="${redhat.fuse.home}" property="redhat.home.created" />
+   <fail unless="redhat.home.created">JBoss Fuse Installation Failed... ${redhat.fuse.home} unable to be created. Please create this folder and verify folder permissions. </fail>   
+   <concat append="yes" destfile="${redhat.fuse.home}/etc/users.properties">${line.separator}${redhat.fuse.admin.user}=${redhat.fuse.admin.password},admin</concat>
+   <echo message="JBoss Fuse installed successfully at ${redhat.fuse.home}." />
+ </target>
+
+ <target name="stop_fuse" description="Stops a JBoss Fuse server.">
+  <condition property="fuse.running">
+    <socket server="${redhat.fuse.admin.hostname}" port="${redhat.fuse.admin.port}" />
+  </condition>
+  <fail unless="fuse.running" message="Server is not currently running." />
+  <echo>---------------------------------------</echo>
+  <echo>=========== Stopping JBoss Fuse ===========</echo>
+  <echo>---------------------------------------</echo>  
+  <condition property="isWindows">
+    <os family="windows"/>
+  </condition> 
+
+  <echo message="Executing JBoss Fuse Stop Script..."/>
+
+  <if>
+   <isset property="isWindows" />
+   <then>
+    <exec dir="${redhat.fuse.home}/bin" executable="cmd">
+      <env key="JAVA_HOME" value="${java.home}" />
+      <arg line="/c stop.bat"/>
+    </exec>       
+  </then>
+  <else>
+   <exec dir="${redhat.fuse.home}/bin" executable="sh"> <arg line="stop" /> </exec>      
+ </else>
+</if>
+<sleep seconds="5" />
+<waitfor maxwait="5" maxwaitunit="second" timeoutproperty="server.stopped">
+  <socket server="${redhat.fuse.admin.hostname}" port="${redhat.fuse.admin.port}"/>
+</waitfor>
+<fail message="Server failed to shut down." unless="server.stopped"/>
+<echo message="Server successfully shut down." />
+</target>
+
+
+
+
+<target name="start_fuse" description="Command to start JBoss Fuse">
+  <condition property="fuse.running">
+   <socket server="${redhat.fuse.admin.hostname}" port="${redhat.fuse.admin.port}"/>
+ </condition>
+ <fail message="Server already running on ${redhat.fuse.admin.hostname}:${redhat.fuse.admin.port}" if="fuse.running"/>
+ <echo>---------------------------------------</echo>
+ <echo>=========== Starting JBoss Fuse ===========</echo>
+ <echo>---------------------------------------</echo>
+
+ <condition property="isWindows">
+  <os family="windows"/>
+</condition> 
+
+<echo message="Executing JBoss Fuse Start Script..."/>
+
+<if>
+ <isset property="isWindows" />
+ <then>
+  <exec dir="${redhat.fuse.home}/bin" executable="cmd" spawn="true">
+    <env key="JAVA_HOME" value="${java.home}" />
+    <arg line="/c start.bat"/>
+  </exec>       
+</then>
+<else>
+ <exec dir="${redhat.fuse.home}/bin" executable="sh"> <arg line="start" /> </exec>      
+</else>
+</if>
+
+<waitfor maxwait="3" maxwaitunit="minute" timeoutproperty="server.start.failed">
+  <socket server="${redhat.fuse.admin.hostname}" port="${redhat.fuse.admin.port}"/>
+</waitfor>
+<fail message="Server failed to startup" if="server.start.failed"/>
+<echo message="Server started successfully"/>
+</target>
+
+
+<target name="start_karaf_session" description="Command to start JBoss Fuse Karaf">
+  <exec dir="${redhat.fuse.home}/bin" executable="cmd" spawn="true"> 
+    <env key="JAVA_HOME" value="${java.home}" />
+    <arg line="/c start karaf.bat"/> 
+  </exec>
+</target>
+
+
+
+
+<target name="deploy_app">
+  
+  <echo message="Deploying ${redhat.fuse.appdeployment.filename}: ${redhat.fuse.appdeployment.dir}"/>
+  <condition property="exists">
+    <available file="${redhat.fuse.home}/deploy/${redhat.fuse.appdeployment.filename}" />
+  </condition>
+  <if>
+    <equals arg1="${exists}" arg2="true" />
+    <then>
+      <echo message="${redhat.fuse.appdeployment.filename} already deployed. If you are trying to update the application, please undeploy first." />
+    </then>
+    <else>
+      <copy file="${redhat.fuse.appdeployment.war.location}/${redhat.fuse.appdeployment.filename}" todir="${redhat.fuse.home}/deploy" verbose="true" />
+      <echo message="${redhat.fuse.appdeployment.name} deployed." />
+    </else>
+  </if>
+</target>
+
+<target name="undeploy_app">
+
+  <condition property="exists">
+    <available file="${redhat.fuse.home}/deploy/${redhat.fuse.appdeployment.filename}" />
+  </condition>
+  <if>
+    <equals arg1="${exists}" arg2="true" />
+    <then>
+      <delete file="${redhat.fuse.home}/deploy/${redhat.fuse.appdeployment.filename}" />
+      <echo message="${redhat.fuse.appdeployment.name} removed." />
+    </then>
+    <else>
+      <echo message="Application is not deployed. Ignoring..." />
+    </else>
+  </if>
+</target>
+
+
+
+
+<target name="deploy_all_apps" description="Deploys all applications to JBoss Fuse.">
+  <foreach list="${applications}" param="appName" delimiter="," target="deploy" inheritall="true" inheritrefs="true" />
+</target>
+
+<target name="undeploy_all_apps" description="Undeploys an application to JBoss Fuse.">
+  <foreach list="${applications}" param="appName" delimiter="," target="undeploy" inheritall="true" inheritrefs="true" />
+</target>
+
+
+
+
+</project>

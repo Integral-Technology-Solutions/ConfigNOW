@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2011 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="SOA Suite Installation">
+
+    <property name="soa.install.tmp.dir" value="${java.io.tmpdir}/soa-suite" />
+
+    <import file="build-oui.xml"/>
+    <target name="install_soa_suite" description="Install SOA Suite">
+    <condition property="is.soa.12c.install">
+        <isset property="wls.version" />
+    </condition>
+    <if>
+    		<isset property="is.soa.12c.install"/>
+    		<then>
+                <antcall target="install_soa_suite_12c"></antcall>
+            </then>
+            <else>
+                <antcall target="install_soa_suite_11g"></antcall>
+            </else>
+    </if>
+    </target>
+    <target name="install_soa_suite_12c" depends="validate.soa.suite.12c.install, populate.soa.suite.12c.rsp, unzip.12c.install.files" description="Install SOA Suite 12c">
+        <property name="silent.rsp" value="tmp/silent_fmw_12c.txt" />
+        <property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp}"/>
+        
+        
+        <echo message="Installing SOA Suite with the following settings:"/>
+		<echo message="================================================"/>
+		<echo message="Middleware Home: ${wls.oracle.home}" />
+		<echo message="SOA Home: ${wls.oracle.home}/${soa.name}" />
+		<echo message="================================================"/>
+        
+        <if>
+			<and>
+				<os family="unix"/>
+				<equals arg1="${register-size}" arg2="64"/>
+			</and>
+			<then>
+				<property name="jar.silent.args" value="-d64 -jar ${soa.suite.install.filename} ${silent.args}" />
+			</then>
+		</if>
+		<!-- 32bit Unix installation -->
+		<if>
+			<and>
+				<os family="unix"/>
+				<equals arg1="${register-size}" arg2="32"/>
+			</and>
+			<then>
+				<property name="jar.silent.args" value="-jar ${soa.suite.install.filename} ${silent.args}" />
+			</then>
+		</if>
+        
+        <echo message="Performing install from jar file ${soa.suite.install.dir}/${soa.suite.install.filename}"/>
+                
+				<property name="jar.silent.args" value="-jar ${soa.suite.install.dir}/${soa.suite.install.filename} ${silent.args}" />
+				<echo message="${jar.silent.args}"/>
+                
+				<exec executable="java" dir="${soa.suite.install.dir}" failonerror="true" output="${ConfigNOW.home}/ConfigNOW.log"  append="true">
+					<arg line=" ${jar.silent.args}" />
+				</exec>
+                
+        <available file="${wls.oracle.home}/${soa.name}" property="soa.home.exists" />
+        <fail unless="soa.home.exists">SOA Suite Install Failed... ${wls.oracle.home}/${soa.name} was not created.</fail>   
+        <delete file="${silent.rsp}"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<echo message="SOA Suite Install Finished"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+        <antcall target="remove.soa.install.tmp.dir"/>
+        
+    </target>
+        
+    <target name="install_soa_suite_11g" depends="validate.soa.suite.install, populate.soa.suite.rsp, unzip.install.files" description="Install SOA Suite 11g">
+    
+		<echo message="Installing SOA Suite with the following settings:"/>
+		<echo message="================================================"/>
+		<echo message="Middleware Home: ${wls.oracle.home}" />
+		<echo message="SOA Home: ${wls.oracle.home}/${soa.name}" />
+		<echo message="================================================"/>
+		<antcall target="generic.oui.install">
+			<param name="oui.install.dir" value="${soa.suite.install.dir}"/>
+		</antcall>
+		<available file="${wls.oracle.home}/${soa.name}" property="soa.home.exists" />
+        <fail unless="soa.home.exists">SOA Suite Install Failed... ${wls.oracle.home}/${soa.name} was not created.</fail>   
+        <delete file="${silent.rsp}"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<echo message="SOA Suite Install Finished"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+        <antcall target="remove.soa.install.tmp.dir"/>
+    </target>
+        
+    <target name="remove.soa.install.tmp.dir">
+		<if>
+			<available file="soa.install.tmp.dir" />
+			<then>
+				<delete dir="soa.install.tmp.dir"/>
+			</then>
+        </if>
+    </target>
+    
+    <target name="unzip.12c.install.files">
+    	<if>
+            <not>
+    			<isset property="soa.suite.install.dir" />
+            </not>
+			
+    		<then>
+				<antcall target="remove.soa.install.tmp.dir"/>
+    			<!--<unzip src="${soa.suite.install.zip}" dest="${soa.install.tmp.dir}"/>-->
+                <antcall target="unzip.install.files"/>
+                <property name="soa.suite.install.dir" value="${soa.install.tmp.dir}" />
+            </then>
+            
+		</if>
+    </target>
+    
+    <target name="unzip.install.files">
+    	<if>
+    		<and>
+				<isset property="soa.suite.install.part1.zip" />
+				<isset property="soa.suite.install.part2.zip" />    		
+    		</and>
+    		<then>
+				<antcall target="remove.soa.install.tmp.dir"/>
+    			<unzip src="${soa.suite.install.part1.zip}" dest="${soa.install.tmp.dir}"/>
+    			<unzip src="${soa.suite.install.part2.zip}" dest="${soa.install.tmp.dir}"/>
+    			<property name="soa.suite.install.dir" value="${soa.install.tmp.dir}/Disk1" />
+    		
+    	
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/linux/runInstaller" perm="755"/>
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/linux/unzip" perm="755"/>		
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/solaris/runInstaller" perm="755"/>		
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/hpia64/runInstaller" perm="755"/>		
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/intelsolaris/runInstaller" perm="755"/>		
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/linux64/runInstaller" perm="755"/>		
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/linux64/unzip" perm="755"/>		
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/linuxS390/runInstaller" perm="755"/>		
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/hpunix/runInstaller" perm="755"/>
+				<chmod file="${soa.install.tmp.dir}/Disk1/install/aix/runInstaller" perm="755"/>
+			</then>
+		</if>
+    </target>
+    
+     <target name="validate.soa.suite.12c.install">
+		
+        <condition property="available.soa.suite.12c.zip">
+			<available file="${soa.suite.install.zip}" />
+          </condition>
+          <condition property="available.soa.suite.12c.dir">
+			<available file="${soa.suite.install.dir}" />
+          </condition>
+          <condition property="available.soa.suite.12c.install.components">
+			<or>
+				<isset property="available.soa.suite.12c.zip" />
+				<isset property="available.soa.suite.12c.dir" />
+			</or>	
+		</condition>
+        <fail unless="available.soa.suite.12c.install.components">Invalid configuration: soa.suite.install.dir or soa.suite.install.zip must be set.</fail>
+        </target>
+    
+    <target name="validate.soa.suite.install">
+		<available file="${soa.suite.install.dir}" property="available.soa.suite.install.dir" />
+        <condition property="available.soa.suite.zips">
+			<and>
+				<available file="${soa.suite.install.part1.zip}" />
+				<available file="${soa.suite.install.part2.zip}" />
+			</and>	
+		</condition>
+    	<condition property="is.single.zip.version">
+    		<or>
+   				<contains string="${soa.suite.install.part1.zip}" substring="11.1.1.2"/>
+   				<contains string="${soa.suite.install.part1.zip}" substring="11.1.1.3"/>
+    		</or>
+    	</condition>
+		<condition property="available.soa.suite.install.components">
+			<or>
+				<isset property="available.soa.suite.zips" />
+				<isset property="available.soa.suite.install.dir" />
+			</or>	
+		</condition>
+    	<if>
+    		<isset property="is.single.zip.version"/>
+    		<then>
+    		<fail message=" Due to a limitation in the product ConfigNOW currently supports installation directly from Zip files only for SOA versions 11.1.1.4 and above.
+    				${line.separator}For all previous SOA SUITE versions with a single zip file, please make sure that you extract the zip file manually to a temporary directory and supply that via [soa.suite.install.dir] property"/>
+    	    		</then>
+    	</if>
+    	
+		<if>
+			<and>
+				<not>
+					<isset property="available.soa.suite.zips" />
+				</not>
+				<isset property="soa.suite.install.part1.zip" />
+				<isset property="soa.suite.install.part2.zip" />
+			</and>
+			<then>
+				<fail message="The following required install files do not exist..." />
+				<fail message="   SOA Suite Install Part 1 of 2: ${soa.suite.install.part1.zip}" />
+				<fail message="   SOA Suite Install Part 1 of 2: ${soa.suite.install.part2.zip}" />
+			</then>
+		</if>
+		<if>
+			<and>
+				<not>
+					<isset property="available.soa.suite.install.dir" />
+				</not>
+				<isset property="soa.suite.install.dir" />
+			</and>
+			<then>
+				<fail message="The following required install path does not exist: ${soa.suite.install.dir}" />
+				<fail message="Ensure the Disk1 installation zip file has been extracted to this location." />
+			</then>
+		</if>
+        <fail unless="available.soa.suite.install.components">Invalid configuration: soa.suite.install.dir must be set or soa.suite.install.part1.zip and soa.suite.install.part2.zip must be set.</fail>
+ 	</target>
+ 
+ <target name="populate.soa.suite.12c.rsp">
+        <condition property="soa.suite.12c.silent.props.exist">
+ 		    <isset property="wls.oracle.home"/>
+ 		</condition>
+        <fail unless="soa.suite.12c.silent.props.exist">Could not populate soaSuite response file - wls.oracle.home property must be set.</fail>
+        <property name="silent.rsp" value="tmp/silent_fmw_12c.txt" />
+        <copy file="resources/silent_fmw_12c.txt" tofile="${silent.rsp}" overwrite="true" />
+ 		<replace file="${silent.rsp}">
+ 			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}"/>
+ 		</replace>
+ </target>
+ 	<target name="populate.soa.suite.rsp">
+ 		<condition property="soa.suite.silent.props.exist">
+ 		    <and>
+ 		      <isset property="wls.oracle.home"/>
+ 		      <isset property="soa.name"/>
+ 		      <isset property="wls.domain.javahome"/>
+ 		    </and>
+ 		</condition>
+ 
+ 		<property name="silent.rsp" value="tmp/soaSuite_${soa.name}.rsp" />
+ 		<fail unless="soa.suite.silent.props.exist">Could not populate soaSuite.rsp file - wls.oracle.home and soa.name properties must be set.</fail>
+ 		<copy file="resources/soaSuite.rsp" tofile="${silent.rsp}" overwrite="true" />
+ 		<replace file="${silent.rsp}">
+ 			<replacefilter token="@@BEA_HOME@@" value="${wls.oracle.home}/${soa.name}"/>
+ 			<replacefilter token="@@MW_HOME@@" value="${wls.oracle.home}"/>
+ 		</replace>
+ 	</target>
+
+</project>

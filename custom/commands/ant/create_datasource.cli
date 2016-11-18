@@ -1,0 +1,7 @@
+deploy --name=oracle --force ../../resources/ojdbc6.jar
+if (result.value == true) of /system-property=test:read-resource
+	data-source add --name=testDS --jndi-name=java\:jboss\/datasources\/testDS  --driver-name=oracle --driver-class=oracle.jdbc.driver.OracleDriver --connection-url=http://localhost:9090;DB_CLOSE_DELAY\=-1
+	data-source enable --name=testDS 
+else
+	
+/subsystem=datasources:installed-drivers-list

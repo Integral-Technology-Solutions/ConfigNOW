@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2011 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="Generic OUI Installation">
+
+    <import file="ant-imports.xml"/>
+    
+    <target name="generic.oui.install">
+		<echo message="Please be patient the silent installer may take several minutes to run."/>		
+        <if>
+            <os family="windows"/>
+            <then>
+                <property name="oui.install.file" value="${oui.install.dir}/setup.exe" />
+                <exec executable="${oui.install.file}" failonerror="true">
+                    <arg line="-silent -response ${basedir}/${silent.rsp} -jreLoc ${wls.domain.javahome} -waitforcompletion" />
+                </exec>
+            </then>
+            <else>
+                <property name="oui.install.file" value="${oui.install.dir}/runInstaller" />
+                <chmod file="${oui.install.dir}/install/linux/runInstaller" perm="750" />
+                <chmod file="${oui.install.dir}/install/linux/unzip" perm="750" />
+                <chmod file="${oui.install.dir}/install/solaris/runInstaller" perm="750" />
+                <chmod file="${oui.install.dir}/install/solaris/unzip" perm="750" />
+				<chmod file="${oui.install.file}" perm="750" />
+                
+                <available property="available.ora.loc" file="/etc/oraInst.loc"/>
+                <if>
+                    <not>
+                        <isset property="available.ora.loc"/>
+                    </not>
+                    <then>
+                        <antcall target="populate.oui.inventory" />
+                        <available property="available.new.ora.loc" file="${oui.inventory.loc}"/>
+                        <fail unless="available.new.ora.loc">oui.inventory.loc property must be set and its value must exist as a file</fail>
+                        <echo message="Creating ${oui.inventory.loc} file as it does not exist"/>
+                        <exec executable="sh" failonerror="true">
+                            <arg line="${oui.install.file} -silent -response ${basedir}/${silent.rsp} -jreLoc ${wls.domain.javahome} -invPtrLoc ${oui.inventory.loc} -waitforcompletion" />
+                        </exec>
+                    </then>
+                    <else>
+                        <exec executable="sh" failonerror="true">
+                            <arg line="${oui.install.file} -silent -response ${basedir}/${silent.rsp} -jreLoc ${wls.domain.javahome} -waitforcompletion" />
+                        </exec>
+                    </else>
+                </if>
+            </else>
+        </if> 
+    </target>
+    
+   	<target name="populate.oui.inventory">
+		<condition property="oui.silent.props.exist">
+			<and>
+			   <isset property="oui.inventory.directory"/>
+			   <isset property="oui.install.group"/>
+			   <isset property="oui.inventory.loc"/>
+			</and>
+		</condition>
+
+		<fail unless="oui.silent.props.exist">Could not populate ${oui.inventory.loc} file - Some required properties are missing.  Required properties are oui.inventory.directory[${oui.inventory.directory}], oui.install.group[${oui.install.group}], oui.inventory.loc[${oui.inventory.loc}]</fail>
+
+		<copy file="resources/oraInst.loc" tofile="${oui.inventory.loc}" overwrite="true" />
+		<replace file="${oui.inventory.loc}">
+			<replacefilter token="@@OUI_INVENTORY_DIRECTORY@@" value="${oui.inventory.directory}"/>
+			<replacefilter token="@@OUI_INSTALL_GROUP@@" value="${oui.install.group}"/>
+		</replace>
+	</target>
+	
+</project>

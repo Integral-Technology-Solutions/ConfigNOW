@@ -1,0 +1,26 @@
+[ENGINE]
+ 
+#DO NOT CHANGE THIS.
+Response File Version=1.0.0.0.0
+ 
+[GENERIC]
+ 
+#Provide the Oracle Home location. The location has to be the immediate child under the specified Middleware Home location. The Oracle Home directory name may only contain alphanumeric , hyphen (-) , dot (.) and underscore (_) characters, and it must begin with an alphanumeric character. The total length has to be less than or equal to 128 characters. The location has to be an empty directory or a valid SOA Oracle Home.
+#ORACLE_HOME=@@ORACLE_HOME@@   # This causes a Soa Suite install failure as ORACLE_HOME is not being set
+ORACLE_HOME=@@BEA_HOME@@
+ 
+#Provide existing Middleware Home location.
+MIDDLEWARE_HOME=@@MW_HOME@@
+ 
+#Set this to true if you wish to specify a directory where latest updates are downloaded. This option would use the software updates from the specified directory
+SPECIFY_DOWNLOAD_LOCATION=false
+ 
+SKIP_SOFTWARE_UPDATES=true
+ 
+[SYSTEM]
+ 
+ 
+[APPLICATIONS]
+ 
+ 
+[RELATIONSHIPS]

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+# ============================================================================
+#
+# Copyright (c) 2007-2010 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+-->
+
+<project name="Active MQ basedir" basedir=".">
+<taskdef resource="net/sf/antcontrib/antcontrib.properties">
+    <classpath>
+      <pathelement location="../../engine/lib/ant-contrib-1.0b1.jar" />
+    </classpath>
+  </taskdef>
+
+<target name="install_activemq" description="Installs ActiveMQ to nominated directory">
+    <available file="${redhat.amq.zip}" property="redhat.installer.exists" />
+    <available file="${redhat.amq.home}" property="redhat.amq.installed" />
+    <fail unless="redhat.installer.exists">ActiveMQ Installation Failed... ${redhat.amq.zip} not available. Please verify redhat.amq.zip property. </fail>   
+    <fail if="redhat.amq.installed">ActiveMQ Installation Failed... ${redhat.amq.home} already exists. Please stop all servers first and delete the installation if you want to proceed. </fail>   
+    <unzip src="${redhat.amq.zip}" dest="${redhat.amq.root.dir}"/>
+    <echo message = "ActiveMQ installed successfully at ${redhat.amq.root.dir} " />
+</target>
+
+<target name="start_amq" description="command to start ActiveMQ">
+<condition property="amq.running">
+	<socket server="${redhat.amq.admin.hostname}" port="${redhat.amq.admin.port}"/>
+</condition>
+<fail message="server already running on ${redhat.amq.admin.hostname}:${redhat.amq.admin.port}" if="amq.running"/>
+        <echo>---------------------------------------</echo>
+        <echo>- starting Active MQ</echo>
+        <echo>---------------------------------------</echo>
+        
+<exec dir="${redhat.amq.home}/bin" executable="cmd.exe" spawn="true" >
+                            <arg line="/C start.bat" />
+                        </exec>
+<waitfor maxwait="10" maxwaitunit="minute" checkevery="30" checkeveryunit="second" timeoutproperty="server.start.failed">
+        <socket server="${redhat.amq.admin.hostname}" port="${redhat.amq.admin.port}"/>
+    </waitfor>
+   <fail message="ActiveMQ server failed to startup" if="server.start.failed"/>
+    <echo message="ActiveMQ server started successfully"/>
+</target>
+
+<target name="stop_amq" description="Stops Active MQ.">
+  <condition property="amq.running">
+    <socket server="${redhat.amq.admin.hostname}" port="${redhat.amq.admin.port}" />
+  </condition>
+  <fail unless="amq.running" message="Server is not currently running." />
+  <echo>---------------------------------------</echo>
+  <echo>=========== Stopping Active MQ ===========</echo>
+  <echo>---------------------------------------</echo>  
+  <condition property="isWindows">
+    <os family="windows"/>
+  </condition> 
+ 
+  <if>
+   <isset property="isWindows" />
+   <then>
+    <exec dir="${redhat.amq.home}/bin" executable="cmd">
+      <env key="JAVA_HOME" value="${java.home}" />
+      <arg line="/c stop.bat"/>
+    </exec>       
+  </then>
+  <else>
+   <exec dir="${redhat.amq.home}/bin" executable="sh"> <arg line="stop" /> </exec>      
+ </else>
+</if>
+<sleep seconds="5" />
+<waitfor maxwait="5" maxwaitunit="second" timeoutproperty="server.stopped">
+  <socket server="${redhat.amq.admin.hostname}" port="${redhat.amq.admin.port}"/>
+</waitfor>
+<fail message="Server failed to shut down." unless="server.stopped"/>
+<echo message="Server successfully shut down." />
+</target>
+
+</project>

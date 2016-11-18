@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2011 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="BI Publisher Tasks" basedir=".">
+	
+	<taskdef resource="net/sf/antcontrib/antcontrib.properties">
+		<classpath>
+			<pathelement location="../../../core/engine/lib/ant-contrib-1.0b1.jar" />
+		</classpath>
+    </taskdef>
+    
+	<target name="validate.bi.deploy.properties">
+    	<if>
+    		<not>
+    			<isset property="bi.publisher.manual.dir" />
+    		</not>
+    		<then>
+    			<fail message="Required property bi.publisher.manual.dir must be set." />
+    		</then>
+    	</if>
+		<if>
+			<and>
+				<not>
+					<available file="${bi.publisher.manual.dir}" />
+				</not>
+				<isset property="bi.publisher.manual.dir" />
+    		</and>
+    		<then>
+    			<fail message="The required BI Publisher manual directory does not exist at ${bi.publisher.manual.dir}"/>
+    		</then>
+    	</if>
+		<if>
+			<not>
+				<isset property="bi.publisher.app.location" />
+			</not>
+			<then>
+				<fail message="Required property bi.publisher.app.location must be set" />
+			</then>
+		</if>		
+	</target>
+
+	<target name="validate.oer.reports.properties">
+    	<if>
+    		<not>
+    			<isset property="bi.publisher.oer.xmlp.zip" />
+    		</not>
+    		<then>
+    			<fail message="Required property bi.publisher.oer.xmlp.zip must be set." />
+    		</then>
+    	</if>
+		<if>
+			<and>
+				<not>
+					<available file="${bi.publisher.oer.xmlp.zip}" />
+				</not>
+				<isset property="bi.publisher.oer.xmlp.zip" />
+    		</and>
+    		<then>
+    			<fail message="The required BI Publisher manual directory does not exist at ${bi.publisher.oer.xmlp.zip}"/>
+    		</then>
+    	</if>
+    </target>
+
+    <target name="deploy_bipublisher10_weblogic" depends="validate.bi.deploy.properties">
+    	<unzip src="${bi.publisher.manual.dir}/generic/xmlpserver.war" dest="${bi.publisher.app.location}" />
+    	<copy todir="${wls.domain.javahome}/jre/lib/fonts">
+			<fileset dir="${bi.publisher.manual.dir}/fonts"/>
+  		</copy>
+  		<replace file="${bi.publisher.app.location}/WEB-INF/xmlp-server-config.xml">
+			<replacefilter token="$${oracle.home}/xdo/repository" value="${bi.publisher.app.location}"/>
+		</replace>
+		<java classname="weblogic.Deployer" fork="true" failonerror="true" inputstring="">
+			<arg line="-adminurl t3://${wls.admin.listener.address}:${wls.admin.listener.port}"/>
+			<arg line="-username ${wls.admin.username}"/> 
+			<arg line="-password ${wls.admin.password}"/>
+			<arg line="-name 'xmlpserver'"/>
+			<arg line="-deploy"/>
+			<arg line="-targets ${bi.publisher.wls.target}"/>
+			<arg line="-verbose"/>
+			<arg line="'${bi.publisher.app.location}'"/>
+			<classpath>
+				<pathelement location="${wls.oracle.home}/${wls.name}/server/lib/weblogic.jar" />					
+			</classpath>
+		</java>
+    </target>
+    
+    <target name="setup_oer_reports" description="Setup OER reports in BI Publisher" depends="validate.oer.reports.properties">
+		<unzip src="${bi.publisher.oer.xmlp.zip}" dest="${bi.publisher.app.location}" />
+		<move todir="${bi.publisher.app.location}">
+			<fileset dir="${bi.publisher.app.location}/XMLP"/>
+		</move>
+		<antcall target="deploy_bipublisher10_weblogic"/>
+    </target>
+    
+</project>

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2010 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="composite-mgmt" basedir=".">
+	<target name="validate.soa.home">
+	    <available file="${soa.home}" property="available.soa.home"/>
+	    <fail unless="available.soa.home">Invalid configuration: ${soa.home} is invalid or does not exist.</fail>
+	</target>
+	<target name="deploy_composite" description="Deploy a composite" depends="validate.soa.home">
+		<property name="composite.overwrite" value="false"/>
+		<property name="composite.default" value="true"/>
+		<ant antfile="${soa.home}/bin/ant-sca-deploy.xml" target="deploy" inheritall="false">
+			<property name="serverURL" value="http://${soa.host}:${wls.server.soa_server1.listener.port}"/>
+			<property name="user" value="${wls.admin.username}"/>
+			<property name="password" value="${wls.admin.password}"/>
+			<property name="sarLocation" value="${composite.location}"/>
+			<property name="overwrite" value="${composite.overwrite}"/>
+			<property name="forceDefault" value="${composite.default}"/>
+			<property name="failOnError" value="true"/>
+		</ant>
+	</target>
+
+	<target name="deploy_composite_with_cp" description="Deploy a composite specifying a config plan" depends="validate.soa.home">
+		<property name="composite.overwrite" value="false"/>
+		<property name="composite.default" value="true"/>
+		<ant antfile="${soa.home}/bin/ant-sca-deploy.xml" target="deploy" inheritall="false">
+			<property name="serverURL" value="http://${soa.host}:${wls.server.soa_server1.listener.port}"/>
+			<property name="user" value="${wls.admin.username}"/>
+			<property name="password" value="${wls.admin.password}"/>
+			<property name="sarLocation" value="${composite.location}"/>
+			<property name="overwrite" value="${composite.overwrite}"/>
+			<property name="forceDefault" value="${composite.default}"/>
+			<property name="configplan" value="${composite.cp}"/>
+			<property name="failOnError" value="true"/>
+		</ant>
+	</target>
+
+	<target name="undeploy_composite" description="Undeploy a composite" depends="validate.soa.home">
+		<ant antfile="${soa.home}/bin/ant-sca-deploy.xml" target="undeploy" inheritall="false">
+			<property name="serverURL" value="http://${soa.host}:${wls.server.soa_server1.listener.port}"/>
+			<property name="user" value="${wls.admin.username}"/>
+			<property name="password" value="${wls.admin.password}"/>
+			<property name="compositeName" value="${composite.name}"/>
+			<property name="revision" value="${composite.revision}"/>
+			<property name="failOnError" value="true"/>
+		</ant>
+	</target>
+
+	<target name="start_composite" description="Start a composite" depends="validate.soa.home">
+		<ant antfile="${soa.home}/bin/ant-sca-mgmt.xml" target="startComposite" inheritall="false">
+			<property name="host" value="${soa.host}"/>
+			<property name="port" value="${wls.server.soa_server1.listener.port}"/>
+			<property name="user" value="${wls.admin.username}"/>
+			<property name="password" value="${wls.admin.password}"/>
+			<property name="compositeName" value="${composite.name}"/>
+			<property name="revision" value="${composite.revision}"/>
+			<property name="failOnError" value="true"/>
+		</ant>
+	</target>
+
+	<target name="stop_composite" description="Stop a composite" depends="validate.soa.home">
+		<ant antfile="${soa.home}/bin/ant-sca-mgmt.xml" target="stopComposite" inheritall="false">
+			<property name="host" value="${soa.host}"/>
+			<property name="port" value="${wls.server.soa_server1.listener.port}"/>
+			<property name="user" value="${wls.admin.username}"/>
+			<property name="password" value="${wls.admin.password}"/>
+			<property name="compositeName" value="${composite.name}"/>
+			<property name="revision" value="${composite.revision}"/>
+			<property name="failOnError" value="true"/>
+		</ant>
+	</target>
+
+	<target name="activate_composite" description="Activate a composite" depends="validate.soa.home">
+		<ant antfile="${soa.home}/bin/ant-sca-mgmt.xml" target="activateComposite" inheritall="false">
+			<property name="host" value="${soa.host}"/>
+			<property name="port" value="${wls.server.soa_server1.listener.port}"/>
+			<property name="user" value="${wls.admin.username}"/>
+			<property name="password" value="${wls.admin.password}"/>
+			<property name="compositeName" value="${composite.name}"/>
+			<property name="revision" value="${composite.revision}"/>
+			<property name="failOnError" value="true"/>
+		</ant>
+	</target>
+
+	<target name="retire_composite" description="Retire a composite" depends="validate.soa.home">
+		<ant antfile="${soa.home}/bin/ant-sca-mgmt.xml" target="retireComposite" inheritall="false">
+			<property name="host" value="${soa.host}"/>
+			<property name="port" value="${wls.server.soa_server1.listener.port}"/>
+			<property name="user" value="${wls.admin.username}"/>
+			<property name="password" value="${wls.admin.password}"/>
+			<property name="compositeName" value="${composite.name}"/>
+			<property name="revision" value="${composite.revision}"/>
+			<property name="failOnError" value="true"/>
+		</ant>
+	</target>
+
+	<target name="set_default_composite" description="Sets a composite revision as the default" depends="validate.soa.home">
+		<ant antfile="${soa.home}/bin/ant-sca-mgmt.xml" target="assignDefaultComposite" inheritall="false">
+			<property name="host" value="${soa.host}"/>
+			<property name="port" value="${wls.server.soa_server1.listener.port}"/>
+			<property name="user" value="${wls.admin.username}"/>
+			<property name="password" value="${wls.admin.password}"/>
+			<property name="compositeName" value="${composite.name}"/>
+			<property name="revision" value="${composite.revision}"/>
+			<property name="failOnError" value="true"/>
+		</ant>
+	</target>
+
+	<target name="list_composites" description="List deployed composites" depends="validate.soa.home">
+		<ant antfile="${soa.home}/bin/ant-sca-mgmt.xml" target="listDeployedComposites" inheritall="false">
+			<property name="host" value="${soa.host}"/>
+			<property name="port" value="${wls.server.soa_server1.listener.port}"/>
+			<property name="user" value="${wls.admin.username}"/>
+			<property name="password" value="${wls.admin.password}"/>
+		</ant>
+	</target>
+
+</project>

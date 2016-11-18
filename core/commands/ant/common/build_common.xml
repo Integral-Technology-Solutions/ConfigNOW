@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2010 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="Common">
+
+	<!-- Set properties if they have not been already set (ant properties are immutable) -->
+	<property name="dir.oracle.weblogic" value="${wls.oracle.home}/${wls.name}"/>	
+	<property name="dir.oracle.jdk" value="${wls.domain.javahome}"/>	
+	<property name="dir.oracle.home" value="${wls.oracle.home}"/>	
+	
+	<path id="lib.wlst">
+		<pathelement location="${dir.oracle.jdk}/jre/lib/rt.jar"/>
+		<pathelement location="${dir.oracle.jdk}/lib/tools.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/server/lib/weblogic.jar"/>
+	</path>
+	
+	<path id="lib.server">
+		<pathelement location="${dir.oracle.weblogic}/server/lib/ojdbc14.jar"/>
+		<pathelement location="${dir.oracle.home}/patch_weblogic921/profiles/default/sys_manifest_classpath/weblogic_patch.jar"/>
+		<pathelement location="${dir.oracle.jdk}/lib/tools.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/server/lib/weblogic_sp.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/server/lib/weblogic.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/server/lib/webservices.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/server/lib/wlxbean.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/server/lib/apachexmlbeansutil.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/server/lib/xquery.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/server/lib/binxml.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/server/lib/xqrl.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/integration/common/lib/mfl-common.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/platform/lib/p13n/p13n_system.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/common/p13n/lib/p13n_common.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/common/lib/log4j.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/common/eval/pointbase/lib/pbclient51.jar"/>
+		<pathelement location="${dir.oracle.weblogic}/common/eval/pointbase/lib/pbembedded51.jar"/>
+	</path>
+	
+	<path id="lib.ConfigNOW">
+	    <fileset dir="${ConfigNOW.home}/core/engine/lib" includes="*.jar"/>
+	</path>
+		
+	<property name="classpath.wlst" refid="lib.wlst"/>
+	<property name="classpath.server" refid="lib.server"/>
+	<property name="classpath.ConfigNOW" refid="lib.ConfigNOW"/>
+	
+	<taskdef resource="net/sf/antcontrib/antcontrib.properties">
+			<classpath>
+				<pathelement location="${ConfigNOW.home}/core/engine/lib/ant-contrib-1.0b1.jar" />
+			</classpath>
+	</taskdef>
+	
+	<!-- - - - - - - - - - - - - - - - - - - - -
+        Boot the Nodemanager
+        - - - - - - - - - - - - - - - - - - - - - -->
+	<target name="start-nodemanager">
+		<echo message="Starting nodemanager"/>
+		<if>
+			<socket server="${nodemanager.host}" port="${nodemanager.port}"/>
+			<then>
+				<echo message="Nodemanager [${nodemanager.host}] is already running at port [${nodemanager.port}]."/>
+			</then>
+			<else>
+				<if>
+					<os family="windows"/>
+					<then>
+						<forget>
+							<exec dir="${nodemanager.dir}" executable="cmd.exe" inputstring="">
+								<arg line="/C START ${nodemanager.executable}.cmd" />
+							</exec>
+						</forget>
+					</then>
+					<else>
+						<forget>
+							<exec dir="${nodemanager.dir}" executable="sh" inputstring="">
+								<arg line="${nodemanager.executable}.sh" />
+							</exec>
+						</forget>
+					</else>
+				</if>
+				<echo message="Waiting for nodemanager to start...  Will wait ${nodemanager.waittime} minutes"/>
+				<waitfor maxwait="${nodemanager.waittime}" maxwaitunit="minute" checkevery="500">
+					<socket server="${nodemanager.host}" port="${nodemanager.port}"/>
+				</waitfor>
+				<echo message="Nodemanager started listening at port [${nodemanager.port}]."/>
+			</else>
+		</if>
+		
+	</target>
+
+	<!-- - - - - - - - - - - - - - - - - - - - -
+        Boot the WebLogic server
+        - - - - - - - - - - - - - - - - - - - - - -->
+	<target name="start-server">
+		<echo message="Starting server ${server.name}"/>
+		<java classname="weblogic.Admin" resultproperty="server-status" fork="true" outputproperty="testoutput" errorproperty="testerror">
+			<arg line="-url t3://${server.host}:${server.port} -username ${wls.admin.username} -password ${wls.admin.password} GETSTATE"/>
+		</java>
+						
+		<if>
+			<and>
+				<socket server="${server.host}" port="${server.port}"/>
+				<equals arg1="0" arg2="${server-status}"/>
+			</and>
+			<then>
+				<echo message="Server [${server.host}] is already running at port [${server.port}]"/>
+			</then>
+		
+			<elseif>
+				<and>
+					<socket server="${server.host}" port="${server.port}"/>
+					<not>
+						<equals arg1="0" arg2="${server-status}"/>
+					</not>
+				</and>
+				<then>
+					<echo message="[${server.host}]:[${server.port}] is already occupied, please make sure that no other process is running at that address"/>
+				</then>
+			</elseif>		
+			<else>
+				<if>
+					<os family="windows"/>
+					<then>
+						<forget>
+							<exec dir="${server.dir}" executable="cmd.exe" inputstring="">
+								<arg line="/C START startWebLogic.cmd" />
+							</exec>
+						</forget>
+					</then>
+					<else>
+						<forget>
+							<exec dir="${server.dir}" executable="sh" inputstring="">
+								<arg line="startWebLogic.sh" />
+							</exec>
+						</forget>
+					</else>
+				</if>
+				<echo message="Waiting for server to start...  Will wait ${server.waittime} minutes"/>
+				<waitfor maxwait="${server.waittime}" maxwaitunit="minute" checkevery="500">
+					
+						<socket server="${server.host}" port="${server.port}"/>
+						
+					
+				</waitfor>
+				<echo message="Server started listening at port [${server.port}]"/>
+			</else>
+		</if>
+	</target>
+
+	<!-- - - - - - - - - - - - - - - - - - - - -
+        Shutdown the WebLogic server
+        - - - - - - - - - - - - - - - - - - - - - -->
+	<target name="stop-server">
+		<echo message="Stopping server ${server.name}"/>
+		<property name="server.waittime" value="2"/>
+		<if>
+			<os family="windows"/>
+			<then>
+				<forget>
+					<exec dir="${server.dir}/bin" executable="cmd.exe" inputstring="">
+						<arg line="/C START stopWebLogic.cmd" />
+					</exec>
+				</forget>
+			</then>
+			<else>
+				<forget>
+					<exec dir="${server.dir}/bin" executable="sh" inputstring="">
+						<arg line="stopWebLogic.sh" />
+					</exec>
+				</forget>
+			</else>
+		</if>
+		<echo message="Waiting for admin server to stop..  Will wait ${server.waittime} minutes"/>
+		<waitfor maxwait="${server.waittime}" maxwaitunit="minute" checkevery="500">
+			<not>
+				<socket server="${server.host}" port="${server.port}"/>
+			</not>
+		</waitfor>
+		<echo message="WebLogic admin server has been stopped."/>
+	</target>
+
+	<!-- - - - - - - - - - - - - - - - - - - - -
+        Boot multiple Managed WebLogic servers
+        - - - - - - - - - - - - - - - - - - - - - -->
+	<target name="start-managed-servers">
+		<for list="${server.names}" param="server.name" delimiter=",">
+			<sequential>
+				<if>
+					<isset property="wls.server.@{server.name}.replace.name"/>
+					<then>
+						<property name="@{server.name}.name" value="${wls.server.@{server.name}.replace.name}"/>
+					</then>
+					<else>
+						<property name="@{server.name}.name" value="${wls.server.@{server.name}.name}"/>
+					</else>
+				</if>
+				<if>
+					<socket server="${wls.server.@{server.name}.listener.address}" port="${wls.server.@{server.name}.listener.port}"/>
+					<then>
+						<echo message="Server [${wls.server.@{server.name}.listener.address}] is already running at port [${wls.server.@{server.name}.listener.port}]."/>
+					</then>
+					<else>
+						<if>
+							<isset property="wls.server.@{server.name}.root.dir"/>
+							<then>
+								<property name="@{server.name}.start.dir" value="${wls.server.@{server.name}.root.dir}" />
+							</then>
+							<else>
+								<property name="@{server.name}.start.dir" value="${server.dir}" />
+							</else>
+						</if>
+						<echo>Starting managed server ${@{server.name}.name} from ${@{server.name}.start.dir}</echo>
+						<if>
+							<os family="windows"/>
+							<then>
+								<forget>
+									<exec dir="${@{server.name}.start.dir}/bin" executable="cmd.exe" inputstring="">
+										<arg line="/C START startManagedWebLogic.cmd ${@{server.name}.name}" />
+									</exec>
+								</forget>
+							</then>
+							<else>
+								<forget>
+									<exec dir="${@{server.name}.start.dir}/bin" executable="sh" inputstring="">
+										<arg line="startManagedWebLogic.sh ${@{server.name}.name}" />
+									</exec>
+								</forget>
+							</else>
+						</if>
+					</else>
+				</if>
+			</sequential>
+		</for>
+		<for list="${server.names}" param="server.name.2" delimiter=",">
+			<sequential>
+				<echo message="Waiting for @{server.name.2} to start...  Will wait ${server.waittime} minutes"/>
+				<waitfor maxwait="${server.waittime}" maxwaitunit="minute" checkevery="500">
+					<socket server="${wls.server.@{server.name.2}.listener.address}" port="${wls.server.@{server.name.2}.listener.port}"/>
+				</waitfor>
+				<echo message="Server started listening at port [${wls.server.@{server.name.2}.listener.port}]."/>
+			</sequential>
+		</for>
+	</target>
+
+	<!-- - - - - - - - - - - - - - - - - - - - -
+        Boot the Managed WebLogic server
+        - - - - - - - - - - - - - - - - - - - - - -->
+	<target name="start-managed-server">
+		<echo message="Starting managed server ${server.name}"/>
+		<if>
+			<socket server="${server.host}" port="${server.port}"/>
+			<then>
+				<echo message="Server [${server.host}] is already running at port [${server.port}]."/>
+			</then>
+			<else>
+				<if>
+					<os family="windows"/>
+					<then>
+						<forget>
+							<exec dir="${server.dir}/bin" executable="cmd.exe" inputstring="">
+								<arg line="/C START startManagedWebLogic.cmd ${server.name}" />
+							</exec>
+						</forget>
+					</then>
+					<else>
+						<forget>
+							<exec dir="${server.dir}/bin" executable="sh" inputstring="">
+								<arg line="startManagedWebLogic.sh ${server.name}" />
+							</exec>
+						</forget>
+					</else>
+				</if>
+				<echo message="Waiting for server to start...  Will wait ${server.waittime} minutes"/>
+				<waitfor maxwait="${server.waittime}" maxwaitunit="minute" checkevery="500">
+					<socket server="${server.host}" port="${server.port}"/>
+				</waitfor>
+				<echo message="Server started listening at port [${server.port}]."/>
+			</else>
+		</if>
+	</target>
+  
+	<!-- - - - - - - - - - - - - - - - - - - - -
+        Shutdown all servers in the domain
+  - - - - - - - - - - - - - - - - - - - - - -->
+  
+	<target name="shutting_servers_down">
+     <echo message="${wls.shutdown}" />
+	 <loadfile property="server_list" srcFile="${confignow.home}/output.txt"/>
+	    <for param="lines" list="${server_list}" delimiter="">
+	      <sequential>
+					<var name="iterate" unset="true"/>
+					<property name="iterate" value="@{lines}"/>
+					<antcall target="process_lines"></antcall>
+	      </sequential>
+	    </for>
+<!--	 <for list="${server_list}" param="name" delimiter=",">
+	 	<sequential>
+	 		<echo message="Checking if @{name} is up"/>
+				<waitfor maxwait="${server.waittime}" maxwaitunit="minute" checkevery="500">
+	 			<socket server="${wls.server.@{server.name.2}.listener.address}" port="${wls.server.@{server.name.2}.listener.port}"/>
+	 		</waitfor> 
+	 		<echo message="Shutting down managed server @{name} listening on port [@{name}]."/>
+			<echo message=""/>			
+	 	</sequential>
+	 </for>	 
+-->     
+  </target>
+	
+	<target name="process_lines">
+    <for param="line" list="${lines}" delimiter=",">
+      <sequential>
+				<echo message="@{line}"/>
+      </sequential>
+    </for>
+		
+	</target>
+	<!-- - - - - - - - - - - - - - - - - - - - -
+        Stop the Managed WebLogic server
+        - - - - - - - - - - - - - - - - - - - - - -->
+	<target name="stop-managed-server">
+		<echo message="Stopping managed server ${server.name}"/>
+		<if>
+			<socket server="${server.host}" port="${server.port}"/>
+			<then>
+				<echo message="Stopping server running at host [${server.host}] and port [${server.port}]."/>
+				<if>
+					<os family="windows"/>
+					<then>
+						<forget>
+							<exec dir="${server.dir}/bin" executable="cmd.exe" inputstring="">
+								<arg line="/C START stopManagedWebLogic.cmd ${server.name} t3://${wls.admin.listener.address}:${wls.admin.listener.port} ${wls.admin.username} ${wls.admin.password}" />
+							</exec>
+						</forget>
+					</then>
+					<else>
+						<forget>
+							<exec dir="${server.dir}/bin" executable="sh" inputstring="">
+								<arg line="stopManagedWebLogic.sh ${server.name} t3://${wls.admin.listener.address}:${wls.admin.listener.port} ${wls.admin.username} ${wls.admin.password}" />
+							</exec>
+						</forget>
+					</else>
+				</if>
+				<sleep seconds="5"/>
+			</then>
+		</if>
+	</target>
+	
+	<!--
+	WLST
+	-->
+	<target name="WLST">
+		<java classname="weblogic.WLST"  fork="true" dir="${wlst.basedir}" failonerror="true" inputstring="">
+			<arg line="${wlst.script}"/>
+			<arg line="${wlst.arguments}"/>
+			<jvmarg line="-Dweblogic.security.TrustKeyStore=${wlst.trustKeyStore}"/>
+			<jvmarg line="-Dweblogic.security.CustomTrustKeyStoreFileName==${wlst.trustKeyStoreFile}"/>
+			<classpath>
+				<pathelement path="${classpath.env}"/>
+				<pathelement path="${classpath.wlst}"/>
+				<pathelement path="${classpath.additional}"/>
+			</classpath>
+		</java>
+	</target>
+	
+	<!--
+	 PointBase
+	 -->
+	<target name="start-pointbase">
+		<java dir="${domain.dir}" classname="com.pointbase.net.netServer" classpath="${classpath.server};${weblogic.dir}/common/eval/pointbase/lib/pbembedded51.jar" fork="true" spawn="true">
+			<arg line="/port:${port} /d:3 /database:${name} /pointbase.ini=${ini} /file=${logfile} /noconsole"/>
+			<jvmarg value="-Ddatabase.home=${home}"/>
+		</java>
+		<echo message="Wait for pointbase server to start... Will wait 2 minutes"/>
+		<waitfor maxwait="2" maxwaitunit="minute" checkevery="200">
+			<socket server="${host}" port="${port}"/>
+		</waitfor>
+		<echo message="Pointbase started."/>
+	</target>
+
+	<target name="stop-pointbase">
+		<if>
+			<os family="windows"/>
+			<then>
+				<exec dir="${domain.dir}" executable="cmd.exe" failonerror="true">
+					<arg line="/C ${weblogic.dir}/common/bin/stopPointBase.cmd -port=${port} -host=${host} -name=${name} -user=${username} -pass=${password}" />
+				</exec>
+			</then>
+			<else>
+				<exec dir="${domain.dir}" executable="sh" failonerror="true">
+					<arg line="${weblogic.dir}/common/bin/stopPointBase.sh -port=${port} -host=${host} -name=${name} -user=${username} -pass=${password}" />
+				</exec>
+			</else>
+		</if>
+	</target>
+	
+	<target name="create.boot.properties">
+		<mkdir dir="${domain.home}/servers/${server.name}/security"/>
+		<propertyfile file="${domain.home}/servers/${server.name}/security/boot.properties">
+			<entry key="username" value="${wls.admin.username}"/>
+			<entry key="password" value="${wls.admin.password}"/>
+		</propertyfile>
+	</target>
+	
+	<!--
+	Database
+	-->
+	<target name="load-db">
+		<sql driver="${db.driver}"
+			url="${db.url}"
+			userid="${db.username}"
+			password="${db.password}"
+			delimiter="${db.delimiter}"
+			onerror="continue"
+			autocommit="true" 
+			classpath="${db.classpath}" print="true">
+			<transaction src="${db.file}"/>
+		</sql>
+	</target>
+	
+</project>

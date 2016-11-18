@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2011 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="OSB Installation">
+
+
+	<property name="osb.install.tmp.dir" value="${java.io.tmpdir}/osb" />
+
+    <import file="build-oui.xml"/>
+    
+	<target name="install_osb" depends="validate.osb.install, populate.osb.rsp, unzip.osb.install.file" description="Install Oracle Service Bus 11g">
+		<echo message="Installing OSB with the following settings:"/>
+		<echo message="================================================"/>
+		<echo message="Middleware Home: ${wls.oracle.home}" />
+		<echo message="OSB Home: ${wls.oracle.home}/${osb.name}" />
+		<echo message="WL Home: ${wls.oracle.home}/${wls.name}" />
+		<echo message="================================================"/>
+		<antcall target="generic.oui.install">
+			<param name="oui.install.dir" value="${osb.install.dir}"/>
+		</antcall>
+		<available file="${wls.oracle.home}/${osb.name}" property="osb.home.exists" />
+		<fail unless="osb.home.exists">OSB Install Failed... ${wls.oracle.home}/${osb.name} was not created.</fail>   
+		<delete file="${silent.rsp}"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<echo message="OSB Install Finished"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<antcall target="remove.osb.install.tmp.dir"/>
+    </target>
+    
+    <target name="remove.osb.install.tmp.dir">
+		<if>
+			<available file="osb.install.tmp.dir" />
+			<then>
+				<delete dir="osb.install.tmp.dir"/>
+			</then>
+        </if>
+    </target>
+    
+    <target name="unzip.osb.install.file">
+    	<if>
+    		<isset property="osb.install.zip" />    		
+    		<then>
+				<antcall target="remove.osb.install.tmp.dir"/>
+    			<unzip src="${osb.install.zip}" dest="${osb.install.tmp.dir}"/>
+    			<property name="osb.install.dir" value="${osb.install.tmp.dir}/Disk1" />
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/linux/runInstaller" perm="755"/>
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/linux/unzip" perm="755"/>		
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/solaris/runInstaller" perm="755"/>		
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/hpia64/runInstaller" perm="755"/>		
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/intelsolaris/runInstaller" perm="755"/>		
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/linux64/runInstaller" perm="755"/>		
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/linux64/unzip" perm="755"/>		
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/linuxS390/runInstaller" perm="755"/>		
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/hpunix/runInstaller" perm="755"/>
+				<chmod file="${osb.install.tmp.dir}/Disk1/install/aix/runInstaller" perm="755"/>
+    		</then>
+    	</if>
+		
+    </target>
+    
+    <target name="validate.osb.install">
+		<available file="${osb.install.dir}" property="available.osb.install.dir" />
+		<condition property="available.osb.zip">
+			<available file="${osb.install.zip}" />
+		</condition>
+		<condition property="available.osb.install.components">
+			<or>
+				<isset property="available.osb.zip" />
+				<isset property="available.osb.install.dir" />
+			</or>	
+		</condition>
+		<if>
+			<and>
+				<not>
+					<isset property="available.osb.zip" />
+				</not>
+				<isset property="osb.install.zip" />
+			</and>
+			<then>
+				<fail message="The following required install file does not exist: ${osb.install.zip}" />
+			</then>
+		</if>
+		<if>
+			<and>
+				<not>
+					<isset property="available.osb.install.dir" />
+				</not>
+				<isset property="osb.install.dir" />
+			</and>
+			<then>
+				<fail message="The following required install path does not exist: ${osb.install.dir}" />
+				<fail message="Ensure the Disk1 installation zip file has been extracted to this location." />
+			</then>
+		</if>
+        <fail unless="available.osb.install.components">Invalid configuration: osb.install.dir or osb.install.zip must be set.</fail>
+ 	</target>
+ 
+ 	<target name="populate.osb.rsp">
+ 		<condition property="osb.silent.props.exist">
+ 		    <and>
+ 		      <isset property="wls.oracle.home"/>
+ 		      <isset property="osb.name"/>
+ 		      <isset property="wls.name"/>
+ 		      <isset property="wls.domain.javahome"/>
+ 		    </and>
+ 		</condition>
+ 
+ 		<property name="silent.rsp" value="tmp/osb_${osb.name}.rsp" />
+ 		<fail unless="osb.silent.props.exist">Could not populate osb11g.rsp file - wls.oracle.home, osb.name and wls.name properties must be set.</fail>
+ 		<copy file="resources/osb11g.rsp" tofile="${silent.rsp}" overwrite="true" />
+ 		<replace file="${silent.rsp}">
+ 			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}/${osb.name}"/>
+ 			<replacefilter token="@@MW_HOME@@" value="${wls.oracle.home}"/>
+ 			<replacefilter token="@@WL_HOME@@" value="${wls.oracle.home}/${wls.name}"/>
+ 		</replace>
+ 	</target>
+
+</project>

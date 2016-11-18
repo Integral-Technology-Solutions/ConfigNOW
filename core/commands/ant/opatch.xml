@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Cop   yright (c) 2007-2011 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="OPatch">
+
+    <import file="ant-imports.xml"/>
+	
+	<target name="opatch_apply" depends="validate_props" description="Apply and Oracle Patch using oPatch">
+		<echo message="Applying an Oracle Patch using oPatch and the following settings:"/>
+        <echo message="================================================================="/>
+		<echo message="Middleware Home: ${wls.oracle.home}" />
+		<echo message="================================================================="/>
+		<antcall target="generic.opatch.run">
+			<param name="opatch.command" value="apply -silent ${opatch.patchesdir}/${opatch.patchname}/"/>
+		</antcall>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<echo message="oPatch apply completed"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+    </target>
+
+	<target name="opatch_lsinventory" depends="" description="Check all patches applied to this instance">
+		<echo message="Applying an Oracle Patch using oPatch and the following settings:"/>
+        <echo message="================================================================="/>
+		<echo message="Middleware Home: ${wls.oracle.home}" />
+		<echo message="================================================================="/>
+		<antcall target="generic.opatch.run">
+			<param name="opatch.command" value="lsinventory"/>
+		</antcall>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<echo message="oPatch lsinventory completed"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+    </target>
+
+	<target name="opatch_rollback" depends="validate_props" description="Rollback a patch applied to this instance">
+		<echo message="Rollback an Oracle Patch using oPatch and the following settings:"/>
+        <echo message="================================================================="/>
+		<echo message="Middleware Home: ${wls.oracle.home}" />
+		<echo message="================================================================="/>
+		<antcall target="generic.opatch.run">
+			<param name="opatch.command" value="rollback -silent -id ${opatch.patchid}"/>
+		</antcall>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<echo message="oPatch rollback completed"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+    </target>
+
+
+           
+    <target name="generic.opatch.run">
+		<echo message="Please be patient the oPatch tools may take several minutes to run."/>		
+        <if>
+            <os family="windows"/>
+            <then>
+                <echo message="IMPORTANT: Please note that on Windows oPatch commands may need to be run as Administrator"/>
+                <echo message="IMPORTANT: If you are receiving message about a locked inventory or OPatch is throwing"/>
+                <echo message="IMPORTANT: Null pointers, then this is likely your issue"/>
+                <property name="opatch.file" value="${wls.oracle.home}/opatch/opatch.bat" />
+                <exec executable="${opatch.file}" failonerror="true">
+                    <arg line=" ${opatch.command}" />
+                    <env key="ORACLE_HOME" value="${wls.oracle.home}"/>
+                </exec>
+            </then>
+            <else>
+                <property name="opatch.file" value="${wls.oracle.home}/OPatch/opatch" />
+                <exec executable="sh" failonerror="true">
+                    <arg line="${opatch.file} ${opatch.command}" />
+                    <env key="ORACLE_HOME" value="${wls.oracle.home}"/>
+                </exec>                
+            </else>
+        </if> 
+    </target>
+
+<target name="validate_props">
+
+<fail unless="wls.oracle.home">Could not continue. Please set 'wls.oracle.home' property </fail>
+
+	<condition property="opatch.props.exist">
+            <and>
+              <isset property="opatch.patchesdir"/>
+              <isset property="opatch.patchname"/>
+              <isset property="opatch.patchid"/>
+            </and>
+        </condition>
+
+
+ <fail unless="opatch.props.exist">Could not continue. Please set 'opatch.patchesdir', 'opatch.patchid' and  'opatch.patchname' properties </fail>
+
+</target>
+
+</project>

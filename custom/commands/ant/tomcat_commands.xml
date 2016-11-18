@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2010 Integral Technology Solutions Pty Ltd, 
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE 
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR 
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT 
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS 
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="example" basedir=".">
+
+<path id="catalina-ant-classpath">
+        <fileset dir="${apache.tomcat.lib.dir}">
+			<include name="catalina-ant.jar"/>
+			<include name="tomcat-coyote.jar"/>
+			<include name="tomcat-util.jar"/>
+		</fileset>
+		<fileset dir="${apache.tomcat.bin.dir}">
+		<include name="tomcat-juli.jar"/>
+		</fileset>
+    </path>
+
+<taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
+
+<target name="install_tomcat" description="Installs Tomcat to nominated directory">
+
+	<available file="${apache.tomcat.zip}" property="tomcat.installer.exists" />
+    <fail unless="tomcat.installer.exists">Tomcat Installation Failed... ${apache.tomcat.zip} not available. Please verify apache.tomcat.zip property. </fail>   
+    <unzip src="${apache.tomcat.zip}" dest="${apache.tomcat.home}"/>
+	<echo message = "Tomcat installed successfully at ${apache.tomcat.home} " />
+</target>
+
+<target name="start_tomcat" description="command to start Tomcat">
+
+<condition property="tomcat.running">
+	<socket server="${apache.tomcat.admin.hostname}" port="${apache.tomcat.admin.port}"/>
+</condition>
+<fail message="server already running on ${apache.tomcat.admin.hostname}:${apache.tomcat.admin.port}" if="tomcat.running"/>
+
+        <echo>---------------------------------------</echo>
+        <echo>- starting tomcat</echo>
+        <echo>---------------------------------------</echo>
+
+   
+ <condition property="isWindows">
+  <os family="windows"/>
+</condition> 
+<if>
+ <isset property="isWindows" />
+ <then>
+ <exec dir="${apache.tomcat.home}/bin" executable="cmd" spawn="true">
+        <arg line="/c startup.bat"/>
+  </exec> 
+   
+   </then>
+   <else>
+    <exec executable="chmod">
+    <arg value="755"/>
+    <arg value="-R"/>
+    <arg value="${apache.tomcat.home}"/>
+  </exec>
+<exec dir="${apache.tomcat.home}/bin" executable="sh" spawn="true">
+        <arg line="/c startup.sh"/>
+  </exec> 
+   
+ </else>
+</if>
+
+  
+    <waitfor maxwait="60" maxwaitunit="second" timeoutproperty="server.start.failed">
+        <socket server="${apache.tomcat.admin.hostname}" port="${apache.tomcat.admin.port}"/>
+    </waitfor>
+    <fail message="server failed to startup" if="server.start.failed"/>
+    <echo message="server started successfully"/> 
+</target>
+<target name="create_admin_user" description="command to stop Tomcat">
+        <echo>---------------------------------------</echo>
+        <echo>-Creating Admin User for Tomcat</echo>
+        <echo>---------------------------------------</echo>
+        
+        </target>
+
+
+<target name="stop_tomcat" description="command to stop Tomcat">
+
+ <if>
+    <not>
+    <socket server="${apache.tomcat.admin.hostname}" port="${apache.tomcat.admin.port}"/>
+    </not>
+    <then>
+        <echo message="server not running...."/>
+     </then>
+     <else>
+     
+        <echo>---------------------------------------</echo>
+        <echo>- stopping tomcat</echo>
+        <echo>---------------------------------------</echo>
+
+ <!-- <java classname="org.apache.catalina.startup.Bootstrap" fork="true">
+   <classpath path="${apache.tomcat.bootstrap.jar}:${apache.tomcat.juli.jar}"/>
+            <jvmarg value="-Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager"/>
+			<jvmarg value="-Djava.util.logging.config.file=${apache.tomcat.home}/conf/logging.properties" />
+
+            <jvmarg value="-Dcatalina.home=${apache.tomcat.home}" />
+            <jvmarg value="-Dcatalina.base=${apache.tomcat.home}" />
+
+            <jvmarg value="-Djava.io.tmpdir=${apache.tomcat.home}/temp" />
+
+   <arg line="stop" />
+  </java>-->
+  
+ <!-- <exec executable="java" dir="${apache.tomcat.home}" spawn="true" >
+    <arg line="-cp bin\bootstrap.jar;bin\tomcat-juli.jar"/>
+    <arg value="org.apache.catalina.startup.Bootstrap"/>
+    <arg line="stop"/>
+</exec>-->
+
+<condition property="isWindows">
+  <os family="windows"/>
+</condition> 
+<if>
+ <isset property="isWindows" />
+ <then>
+ <exec dir="${apache.tomcat.home}/bin" executable="cmd" spawn="true">
+        <arg line="/c shutdown.bat"/>
+  </exec> 
+   
+   </then>
+   <else>
+    <exec executable="chmod">
+    <arg value="755"/>
+    <arg value="-R"/>
+    <arg value="${apache.tomcat.home}"/>
+  </exec>
+ <exec dir="${apache.tomcat.home}/bin" executable="sh" spawn="true">
+        <arg line="/c shutdown.sh"/>
+  </exec> 
+ </else>
+</if>
+ 
+
+ <sleep seconds="30"/>
+    <if>
+    <not>
+    <socket server="${apache.tomcat.admin.hostname}" port="${apache.tomcat.admin.port}"/>
+    </not>
+    <then>
+        <echo message="server stopped successfully"/>
+     </then>
+    <else>
+    <echo message="server failed to stop"/> 
+    </else>
+</if>
+
+</else>
+</if>
+</target>
+
+<taskdef name="xmltask" classname="com.oopsconsultancy.xmltask.ant.XmlTask"/>
+  
+<target name="add_tomcat_user" description="Adds user to Tomcat">
+<echo>---------------------------------------</echo>
+<echo>-Creating Admin User for Tomcat</echo>
+<echo>---------------------------------------</echo>
+<xmltask source="${apache.tomcat.home}/conf/tomcat-users.xml" dest="${apache.tomcat.home}/conf/tomcat-users.xml">
+    <insert path="//*[local-name()='tomcat-users']" > <![CDATA[
+        <user username="${apache.tomcat.admin.user}" password="${apache.tomcat.admin.password}" roles="manager-gui,manager-script"/>
+    ]]>
+    </insert>
+</xmltask>
+  </target>
+	
+<taskdef name="deploy" classname="org.apache.catalina.ant.DeployTask" classpath="catalina-ant-classpath" />
+<taskdef name="list" classname="org.apache.catalina.ant.ListTask" classpath="catalina-ant-classpath"/>
+<taskdef name="reload" classname="org.apache.catalina.ant.ReloadTask" classpath="catalina-ant-classpath"/>
+<taskdef name="undeploy" classname="org.apache.catalina.ant.UndeployTask" classpath="catalina-ant-classpath"/>
+        
+<target name="deploy_tomcat_app" description="Deploy web application to tomcat server">
+	<available file="${apache.tomcat.appdeployment.war.location}" property="tomcat.appdeployment.exists" />
+		
+	<deploy url="${apache.tomcat.admin.url}" username="${apache.tomcat.admin.user}" password="${apache.tomcat.admin.password}"
+            path="${apache.tomcat.appdeployment.path}" war="file:${apache.tomcat.appdeployment.war.location}"/>
+</target>
+
+<target name="reload_tomcat_app" description="Reload web application in the Tomcat Server">
+
+    <reload  url="${apache.tomcat.admin.url}" username="${apache.tomcat.admin.user}" password="${apache.tomcat.admin.password}"
+            path="${apache.tomcat.appdeployment.path}"/>
+</target>
+
+<target name="undeploy_tomcat_app" description="Remove web application">
+    <undeploy url="${apache.tomcat.admin.url}" username="${apache.tomcat.admin.user}" password="${apache.tomcat.admin.password}"
+            path="${apache.tomcat.appdeployment.path}"/>
+</target>
+<target name="list_deployed_apps_tomcat" description="Lists all web applications deployed in tomcat server">
+	<list url="${apache.tomcat.admin.url}" username="${apache.tomcat.admin.user}" password="${apache.tomcat.admin.password}"/>
+</target>
+
+</project>

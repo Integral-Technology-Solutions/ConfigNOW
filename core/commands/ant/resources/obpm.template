@@ -1,0 +1,105 @@
+########################################
+# Oracle BPM Config Wizard template         #
+########################################
+@tasks-to-execute
+tasks=CreateDirectory,CreateEngine,PublishSample,CreateEARs
+
+
+########################################
+# Directory Configuration              #
+########################################
+@dir-config-begin
+@dir-config-xml-begin
+<?xml version="1.0" encoding="UTF-8"?>
+<?fuego version="6.5.1" build="94375"?>
+<DirectoryConfiguration>
+	<id>default</id>
+	<description>Default Directory Configuration</description>
+	<admin>@@OBPM_USER@@</admin>
+	<adminPass>@@OBPM_PASSWORD@@</adminPass>
+	<presets>
+		<preset name="engine">
+			<property name="participant" value="@@OBPM_USER@@"/>
+			<property name="participant_password" value="@@OBPM_PASSWORD@@"/>
+		</preset>
+		<preset name="xobjects">
+			<property name="participant" value="@@OBPM_USER@@"/>
+			<property name="participant_password" value="@@OBPM_PASSWORD@@"/>
+		</preset>
+		<preset name="portal-anonymous">
+			<property name="participant" value="@@OBPM_USER@@"/>
+			<property name="participant_password" value="@@OBPM_PASSWORD@@"/>
+		</preset>
+		<preset name="datawarehouse">
+			<property name="participant" value="@@OBPM_USER@@"/>
+			<property name="participant_password" value="@@OBPM_PASSWORD@@"/>
+		</preset>
+		<preset name="papiws-anonymous">
+			<property name="participant" value="@@OBPM_USER@@"/>
+			<property name="participant_password" value="@@OBPM_PASSWORD@@"/>
+		</preset>
+	</presets>
+	<set>
+		<configuration name="fuego" type="SQL" subtype="DDORACLE">
+			<property name="jdbc.pool.idle_timeout" value="5"/>
+			<property name="jdbc.pool.entry.max" value="10"/>
+			<property name="oracle.dateEqualsTimestamp" value="false"/>
+			<property name="jdbc.host" value="@@OBPM_DIR_DB_HOST@@"/>
+			<property name="user" value="@@OBPM_DIR_USER@@"/>
+			<property name="jdbc.port" value="@@OBPM_DIR_DB_PORT@@"/>
+			<property name="jdbc.pool.min" value="0"/>
+			<property name="jdbc.pool.maxopencursors" value="100"/>
+			<property name="oracle.sid" value="@@OBPM_DIR_DB_SID@@"/>
+			<property name="password" value="@@OBPM_DIR_PASSWORD@@"/>
+			<property name="jdbc.xa" value="false"/>
+			<property name="jdbc.pool.max" value="10"/>
+		</configuration>
+	</set>
+</DirectoryConfiguration>
+@dir-config-xml-end
+directory.description=Default Directory Configuration
+directory.organization=@@ORGANISATION_ID@@
+directory.dba=system
+directory.dba.password=@@DB_SYS_PASSWORD@@
+directory.enableSSO=false
+@dir-config-end
+
+
+########################################
+# Engine Configuration                 #
+########################################
+@engine-config-begin
+@engine-config-xml-begin
+<set>
+	<configuration name="bpmengine" type="SQL" subtype="DDORACLE">
+		<property name="jdbc.pool.idle_timeout" value="5"/>
+		<property name="jdbc.pool.entry.max" value="10"/>
+		<property name="oracle.dateEqualsTimestamp" value="false"/>
+		<property name="jdbc.host" value="@@OBPM_ENGINE_DB_HOST@@"/>
+		<property name="user" value="@@OBPMN_ENGINE_USER@@"/>
+		<property name="jdbc.port" value="@@OBPM_ENGINE_DB_PORT@@"/>
+		<property name="jdbc.pool.min" value="0"/>
+		<property name="jdbc.pool.maxopencursors" value="100"/>
+		<property name="oracle.sid" value="@@OBPM_ENGINE_DB_SID@@"/>
+		<property name="password" value="@@OBPM_ENGINE_PASSWORD@@"/>
+		<property name="jdbc.xa" value="false"/>
+		<property name="jdbc.pool.max" value="10"/>
+	</configuration>
+</set>
+@engine-config-xml-end
+engine.name=@@ENGINE_ID@@
+engine.dir=@@ENGINES_DIRECTORY@@
+engine.dba=system
+engine.dba.password=@@DB_SYS_PASSWORD@@
+@engine-config-end
+
+
+########################################
+# EARs to create                       #
+########################################
+@ears-to-create-begin
+earsToCreate=Engine,Feeds,PAPIWS,Workspace,WorkspaceAdmin,ALSB
+ears.folder=@@EARS_DIRECTORY@@
+@ears-to-create-end
+
+
