@@ -89,12 +89,7 @@
     <fail message="server failed to startup" if="server.start.failed"/>
     <echo message="server started successfully"/> 
 </target>
-<target name="create_admin_user" description="command to stop Tomcat">
-        <echo>---------------------------------------</echo>
-        <echo>-Creating Admin User for Tomcat</echo>
-        <echo>---------------------------------------</echo>
-        
-        </target>
+
 
 
 <target name="stop_tomcat" description="command to stop Tomcat">

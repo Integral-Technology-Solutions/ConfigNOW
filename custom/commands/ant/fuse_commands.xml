@@ -136,7 +136,7 @@
 
 
 
-<target name="deploy_app">
+<target name="deploy_fuse_app" description="Command to deploy to JBoss Fuse">
   
   <echo message="Deploying ${redhat.fuse.appdeployment.filename}: ${redhat.fuse.appdeployment.dir}"/>
   <condition property="exists">
@@ -154,7 +154,7 @@
   </if>
 </target>
 
-<target name="undeploy_app">
+<target name="undeploy_fuse_app" description="Command to undeploy from JBoss Fuse">
 
   <condition property="exists">
     <available file="${redhat.fuse.home}/deploy/${redhat.fuse.appdeployment.filename}" />
@@ -169,17 +169,6 @@
       <echo message="Application is not deployed. Ignoring..." />
     </else>
   </if>
-</target>
-
-
-
-
-<target name="deploy_all_apps" description="Deploys all applications to JBoss Fuse.">
-  <foreach list="${applications}" param="appName" delimiter="," target="deploy" inheritall="true" inheritrefs="true" />
-</target>
-
-<target name="undeploy_all_apps" description="Undeploys an application to JBoss Fuse.">
-  <foreach list="${applications}" param="appName" delimiter="," target="undeploy" inheritall="true" inheritrefs="true" />
 </target>
 
 

@@ -28,7 +28,7 @@
     <unzip src="${redhat.jboss.zip}" dest="${redhat.jboss.root.dir}"/>
 	<echo message = "jboss installed successfully at ${redhat.jboss.root.dir} " />
     <exec dir="${redhat.jboss.home}/bin" executable="cmd" spawn="true">
-        <arg line="/c add-user.bat admin admin"/>
+        <arg line="/c add-user.bat ${redhat.jboss.admin.user} ${redhat.jboss.admin.password}"/>
   </exec>
     
 </target>
