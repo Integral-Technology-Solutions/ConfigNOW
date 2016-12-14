@@ -315,7 +315,7 @@
  		</condition>
         <fail unless="soa.suite.12c.silent.props.exist">Could not populate fmw_infrastructure response file - wls.oracle.home property must be set.</fail>
         <property name="silent.rsp" value="tmp/silent_fmw_infra_12c.txt" />
-        <copy file="resources/silent_fmw_infra_12c.txt" tofile="${silent.rsp}" overwrite="true" />
+        <copy file="resources/fmw_resp.rsp" tofile="${silent.rsp}" overwrite="true" />
  		<replace file="${silent.rsp}">
  			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}"/>
  		</replace>
