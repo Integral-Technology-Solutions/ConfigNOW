@@ -43,7 +43,7 @@
     </if>
     </target>
     <target name="install_soa_suite_12c" depends="validate.soa.suite.12c.install, populate.soa.suite.12c.rsp, unzip.12c.install.files" description="Install SOA Suite 12c">
-        <property name="silent.rsp" value="tmp/silent_fmw_12c.txt" />
+        <property name="silent.rsp" value="tmp/silent_soa_12c.txt" />
         <property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp}"/>
         
         
@@ -90,6 +90,56 @@
 		<echo message="SOA Suite Install Finished"/>
 		<echo message="================================================"/>
 		<echo message="================================================"/>
+        <antcall target="remove.soa.install.tmp.dir"/>
+        
+    </target>
+    <target name="install_fmw_infra" depends="validate.fmw.install, populate.fmw.rsp" description="Install FMW 12c infrastructure">
+        <property name="silent.rsp" value="tmp/silent_fmw_infra_12c.txt" />
+        <property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp}"/>
+        
+        
+        <echo message="Installing FMW infrastructure with the following settings:"/>
+		<echo message="================================================"/>
+		<echo message="Middleware Home: ${wls.oracle.home}" />
+		<echo message="================================================"/>
+        
+        <if>
+			<and>
+				<os family="unix"/>
+				<equals arg1="${register-size}" arg2="64"/>
+			</and>
+			<then>
+				<property name="jar.silent.args" value="-d64 -jar ${fmw.install.file} ${silent.args}" />
+			</then>
+		</if>
+		<!-- 32bit Unix installation -->
+		<if>
+			<and>
+				<os family="unix"/>
+				<equals arg1="${register-size}" arg2="32"/>
+			</and>
+			<then>
+				<property name="jar.silent.args" value="-jar ${fmw.install.file} ${silent.args}" />
+			</then>
+		</if>
+        
+        <echo message="Performing install from jar file ${fmw.install.file}"/>
+                
+				<property name="jar.silent.args" value="-jar ${fmw.install.file} ${silent.args}" />
+				<echo message="${jar.silent.args}"/>
+                
+				<exec executable="java" dir="${wls.oracle.home}" failonerror="true" output="${ConfigNOW.home}/ConfigNOW.log"  append="true">
+					<arg line=" ${jar.silent.args}" />
+				</exec>
+                
+        <available file="${wls.oracle.home}/em" property="infra.home.exists" />
+        <fail unless="infra.home.exists">FMW infrastructure Install Failed... ${wls.oracle.home}/em was not created.</fail>   
+        <delete file="${silent.rsp}"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<echo message="FMW INfrasructure Install Finished Successfully"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/> 
         <antcall target="remove.soa.install.tmp.dir"/>
         
     </target>
@@ -183,6 +233,11 @@
 		</condition>
         <fail unless="available.soa.suite.12c.install.components">Invalid configuration: soa.suite.install.dir or soa.suite.install.zip must be set.</fail>
         </target>
+        
+         <target name="validate.fmw.install">
+		<available file="${fmw.install.file}" property="available.fmw.install.file" />
+        <fail unless="available.fmw.install.file">Invalid configuration: fmw.install.file must be set.</fail>
+        </target>
     
     <target name="validate.soa.suite.install">
 		<available file="${soa.suite.install.dir}" property="available.soa.suite.install.dir" />
@@ -246,12 +301,26 @@
  		    <isset property="wls.oracle.home"/>
  		</condition>
         <fail unless="soa.suite.12c.silent.props.exist">Could not populate soaSuite response file - wls.oracle.home property must be set.</fail>
-        <property name="silent.rsp" value="tmp/silent_fmw_12c.txt" />
-        <copy file="resources/silent_fmw_12c.txt" tofile="${silent.rsp}" overwrite="true" />
+        <property name="silent.rsp" value="tmp/silent_soa_12c.txt" />
+        <copy file="resources/soaSuite1221.rsp" tofile="${silent.rsp}" overwrite="true" />
+ 		<replace file="${silent.rsp}">
+		        <replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}"/>
+
+ 		</replace>
+ </target>
+ 
+ <target name="populate.fmw.rsp">
+        <condition property="soa.suite.12c.silent.props.exist">
+ 		    <isset property="wls.oracle.home"/>
+ 		</condition>
+        <fail unless="soa.suite.12c.silent.props.exist">Could not populate fmw_infrastructure response file - wls.oracle.home property must be set.</fail>
+        <property name="silent.rsp" value="tmp/silent_fmw_infra_12c.txt" />
+        <copy file="resources/silent_fmw_infra_12c.txt" tofile="${silent.rsp}" overwrite="true" />
  		<replace file="${silent.rsp}">
  			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}"/>
  		</replace>
  </target>
+ 
  	<target name="populate.soa.suite.rsp">
  		<condition property="soa.suite.silent.props.exist">
  		    <and>

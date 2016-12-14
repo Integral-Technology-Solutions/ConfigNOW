@@ -42,7 +42,10 @@
 
 	<available file="${apache.tomcat.zip}" property="tomcat.installer.exists" />
     <fail unless="tomcat.installer.exists">Tomcat Installation Failed... ${apache.tomcat.zip} not available. Please verify apache.tomcat.zip property. </fail>   
-    <unzip src="${apache.tomcat.zip}" dest="${apache.tomcat.home}"/>
+    <unzip src="${apache.tomcat.zip}" dest="${apache.tomcat.root.dir}"/>
+ <available file="${apache.tomcat.home}" property="tomcat.home.created" />
+   <fail unless="tomcat.home.created">Tomcat Installation Failed... ${apache.tomcat.home} not created.</fail>
+
 	<echo message = "Tomcat installed successfully at ${apache.tomcat.home} " />
 </target>
 
@@ -64,7 +67,7 @@
 <if>
  <isset property="isWindows" />
  <then>
- <exec dir="${apache.tomcat.home}/bin" executable="cmd" spawn="true">
+ <exec dir="${apache.tomcat.bin.dir}" executable="cmd" spawn="true">
         <arg line="/c startup.bat"/>
   </exec> 
    
@@ -75,8 +78,8 @@
     <arg value="-R"/>
     <arg value="${apache.tomcat.home}"/>
   </exec>
-<exec dir="${apache.tomcat.home}/bin" executable="sh" spawn="true">
-        <arg line="/c startup.sh"/>
+<exec dir="${apache.tomcat.bin.dir}" executable="sh" spawn="true">
+        <arg line="startup.sh"/>
   </exec> 
    
  </else>
@@ -132,7 +135,7 @@
 <if>
  <isset property="isWindows" />
  <then>
- <exec dir="${apache.tomcat.home}/bin" executable="cmd" spawn="true">
+ <exec dir="${apache.tomcat.bin.dir}" executable="cmd" spawn="true">
         <arg line="/c shutdown.bat"/>
   </exec> 
    
@@ -143,8 +146,8 @@
     <arg value="-R"/>
     <arg value="${apache.tomcat.home}"/>
   </exec>
- <exec dir="${apache.tomcat.home}/bin" executable="sh" spawn="true">
-        <arg line="/c shutdown.sh"/>
+ <exec dir="${apache.tomcat.bin.dir}" executable="sh" spawn="true">
+        <arg line="shutdown.sh"/>
   </exec> 
  </else>
 </if>

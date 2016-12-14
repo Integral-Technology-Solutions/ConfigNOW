@@ -110,15 +110,22 @@
  <then>
   <exec dir="${redhat.fuse.home}/bin" executable="cmd" spawn="true">
     <env key="JAVA_HOME" value="${java.home}" />
-    <arg line="/c start.bat"/>
+    <arg line="/c fuse.bat"/>
   </exec>       
 </then>
 <else>
- <exec dir="${redhat.fuse.home}/bin" executable="sh"> <arg line="start" /> </exec>      
+ <exec executable="chmod">
+    <arg value="755"/>
+    <arg value="-R"/>
+    <arg value="${redhat.fuse.home}"/>
+  </exec>
+ <exec dir="${redhat.fuse.home}/bin" executable="sh" spawn="true">
+ <arg line="fuse"/>
+</exec>      
 </else>
 </if>
 
-<waitfor maxwait="3" maxwaitunit="minute" timeoutproperty="server.start.failed">
+<waitfor maxwait="1" maxwaitunit="minute" checkevery="10" checkeveryunit="second" timeoutproperty="server.start.failed">
   <socket server="${redhat.fuse.admin.hostname}" port="${redhat.fuse.admin.port}"/>
 </waitfor>
 <fail message="Server failed to startup" if="server.start.failed"/>
@@ -127,10 +134,20 @@
 
 
 <target name="start_karaf_session" description="Command to start JBoss Fuse Karaf">
+<if>
+ <isset property="isWindows" />
+ <then>
+
   <exec dir="${redhat.fuse.home}/bin" executable="cmd" spawn="true"> 
     <env key="JAVA_HOME" value="${java.home}" />
     <arg line="/c start karaf.bat"/> 
   </exec>
+</then>
+<else>
+ <exec dir="${redhat.fuse.home}/bin" executable="sh" spawn="true"> <arg line="karaf" /> </exec>
+</else>
+</if>
+
 </target>
 
 

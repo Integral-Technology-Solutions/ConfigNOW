@@ -26,17 +26,45 @@
 	<available file="${redhat.jboss.zip}" property="redhat.installer.exists" />
     <fail unless="redhat.installer.exists">jboss Installation Failed... ${redhat.jboss.zip} not available. Please verify redhat.jboss.zip property. </fail>   
     <unzip src="${redhat.jboss.zip}" dest="${redhat.jboss.root.dir}"/>
-	<echo message = "jboss installed successfully at ${redhat.jboss.root.dir} " />
+	<echo message = "jboss installed successfully at ${redhat.jboss.home} " />
+    
+    <condition property="isWindows">
+  <os family="windows"/>
+</condition> 
+<if>
+ <isset property="isWindows" />
+ <then>
     <exec dir="${redhat.jboss.home}/bin" executable="cmd" spawn="true">
         <arg line="/c add-user.bat ${redhat.jboss.admin.user} ${redhat.jboss.admin.password}"/>
   </exec>
-    
+ </then>
+ <else>
+ <exec dir="${redhat.jboss.home}/bin" executable="sh" spawn="true">
+        <arg line="add-user.sh ${redhat.jboss.admin.user} ${redhat.jboss.admin.password}"/>
+  </exec>
+ </else>
+ </if>
 </target>
 <target name="add_user" description="Adds user to jboss">
 <echo message = "Adding management user as specified by redhat.jboss.admin.user and redhat.jboss.admin.password properties" />
+ <condition property="isWindows">
+  <os family="windows"/>
+</condition>
+<if>
+ <isset property="isWindows" />
+ <then>
+
 <exec dir="${redhat.jboss.home}/bin" executable="cmd" spawn="true">
         <arg line="/c add-user.bat ${redhat.jboss.admin.user} ${redhat.jboss.admin.password}"/>
   </exec>
+ </then>
+ <else>
+ <exec dir="${redhat.jboss.home}/bin" executable="sh" spawn="true">
+        <arg line="add-user.sh ${redhat.jboss.admin.user} ${redhat.jboss.admin.password}"/>
+  </exec>
+ </else>
+ </if>
+
   </target>
 
 <taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
@@ -68,7 +96,7 @@
     <arg value="${redhat.jboss.home}"/>
   </exec>
  <exec dir="${redhat.jboss.home}/bin" executable="sh" spawn="true">
-        <arg line="/c standalone.sh"/>
+        <arg line="standalone.sh"/>
   </exec>
  </else>
 </if>

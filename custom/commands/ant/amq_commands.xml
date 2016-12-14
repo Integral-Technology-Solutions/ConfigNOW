@@ -44,11 +44,31 @@
         <echo>---------------------------------------</echo>
         <echo>- starting Active MQ</echo>
         <echo>---------------------------------------</echo>
+ <condition property="isWindows">
+    <os family="windows"/>
+  </condition>
+
+  <if>
+   <isset property="isWindows" />
+   <then>
         
 <exec dir="${redhat.amq.home}/bin" executable="cmd.exe" spawn="true" >
                             <arg line="/C start.bat" />
                         </exec>
-<waitfor maxwait="10" maxwaitunit="minute" checkevery="30" checkeveryunit="second" timeoutproperty="server.start.failed">
+ </then>
+  <else>
+ <exec executable="chmod">
+    <arg value="755"/>
+    <arg value="-R"/>
+    <arg value="${redhat.amq.home}"/>
+  </exec>
+
+ <exec dir="${redhat.amq.home}/bin" executable="sh" spawn="true"> <arg line="start" /> </exec>
+ </else>
+</if>
+
+
+<waitfor maxwait="1" maxwaitunit="minute" checkevery="30" checkeveryunit="second" timeoutproperty="server.start.failed">
         <socket server="${redhat.amq.admin.hostname}" port="${redhat.amq.admin.port}"/>
     </waitfor>
    <fail message="ActiveMQ server failed to startup" if="server.start.failed"/>
@@ -70,17 +90,17 @@
   <if>
    <isset property="isWindows" />
    <then>
-    <exec dir="${redhat.amq.home}/bin" executable="cmd">
+    <exec dir="${redhat.amq.home}/bin" executable="cmd" spawn="true">
       <env key="JAVA_HOME" value="${java.home}" />
       <arg line="/c stop.bat"/>
     </exec>       
   </then>
   <else>
-   <exec dir="${redhat.amq.home}/bin" executable="sh"> <arg line="stop" /> </exec>      
+   <exec dir="${redhat.amq.home}/bin" executable="sh" spawn="true"> <arg line="stop" /> </exec>      
  </else>
 </if>
 <sleep seconds="5" />
-<waitfor maxwait="5" maxwaitunit="second" timeoutproperty="server.stopped">
+<waitfor maxwait="30" maxwaitunit="second" timeoutproperty="server.stopped">
   <socket server="${redhat.amq.admin.hostname}" port="${redhat.amq.admin.port}"/>
 </waitfor>
 <fail message="Server failed to shut down." unless="server.stopped"/>
