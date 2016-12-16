@@ -81,6 +81,10 @@
     	</if>
 		
     </target>
+    <target name="validate.osb12c.install">
+		<available file="${osb.install.dir}/${osb.install.filename}" property="available.osb.install.jar" />
+		<fail unless="available.osb.install.jar">Invalid configuration: osb.install.dir and osb.install.filename must be set to a valid path.</fail>
+    </target>
     
     <target name="validate.osb.install">
 		<available file="${osb.install.dir}" property="available.osb.install.dir" />
@@ -91,6 +95,7 @@
 			<or>
 				<isset property="available.osb.zip" />
 				<isset property="available.osb.install.dir" />
+
 			</or>	
 		</condition>
 		<if>
@@ -138,5 +143,77 @@
  			<replacefilter token="@@WL_HOME@@" value="${wls.oracle.home}/${wls.name}"/>
  		</replace>
  	</target>
+    
+    <target name="populate.osb12c.rsp">
+ 		<condition property="osb.silent.props.exist">
+ 		    <and>
+ 		      <isset property="wls.oracle.home"/>
+ 		      <isset property="osb.name"/>
+ 		      <isset property="wls.name"/>
+ 		      <isset property="wls.domain.javahome"/>
+ 		    </and>
+ 		</condition>
+ 
+ 		<property name="silent.rsp" value="tmp/osb12c.rsp" />
+ 		<fail unless="osb.silent.props.exist">Could not populate osb12c.rsp file - wls.oracle.home, osb.name and wls.name properties must be set.</fail>
+ 		<copy file="resources/osb12c.rsp" tofile="${silent.rsp}" overwrite="true" />
+ 		<replace file="${silent.rsp}">
+ 			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}/${osb.name}"/>
+ 			<replacefilter token="@@MW_HOME@@" value="${wls.oracle.home}"/>
+ 			<replacefilter token="@@WL_HOME@@" value="${wls.oracle.home}/${wls.name}"/>
+ 		</replace>
+ 	</target>
+    
+    <target name="install_osb12c" depends="validate.osb12c.install, populate.osb12c.rsp" description="Installs OSB 12c">
+        <property name="silent.rsp" value="tmp/silent_osb_12c.txt" />
+        <property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp}"/>
+        
+        
+        <echo message="Installing OSB with the following settings:"/>
+		<echo message="================================================"/>
+		<echo message="Middleware Home: ${wls.oracle.home}" />
+		<echo message="OSB Home: ${wls.oracle.home}/${osb.name}" />
+		<echo message="================================================"/>
+        
+        <if>
+			<and>
+				<os family="unix"/>
+				<equals arg1="${register-size}" arg2="64"/>
+			</and>
+			<then>
+				<property name="jar.silent.args" value="-d64 -jar ${osb.install.filename} ${silent.args}" />
+			</then>
+		</if>
+		<!-- 32bit Unix installation -->
+		<if>
+			<and>
+				<os family="unix"/>
+				<equals arg1="${register-size}" arg2="32"/>
+			</and>
+			<then>
+				<property name="jar.silent.args" value="-jar ${osb.install.filename} ${silent.args}" />
+			</then>
+		</if>
+        
+        <echo message="Performing install from jar file ${osb.install.dir}/${osb.install.filename}"/>
+                
+				<property name="jar.silent.args" value="-jar ${osb.install.dir}/${osb.install.filename} ${silent.args}" />
+				<echo message="${jar.silent.args}"/>
+                
+				<exec executable="java" dir="${osb.install.dir}" failonerror="true" output="${ConfigNOW.home}/ConfigNOW.log"  append="true">
+					<arg line=" ${jar.silent.args}" />
+				</exec>
+                
+        <available file="${wls.oracle.home}/${osb.name}" property="osb.home.exists" />
+        <fail unless="osb.home.exists">OSB 12c Install Failed... ${wls.oracle.home}/${osb.name} was not created.</fail>   
+        <delete file="${silent.rsp}"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+		<echo message="Oracle Service Bus 12c Install Finished"/>
+		<echo message="================================================"/>
+		<echo message="================================================"/>
+        <antcall target="remove.osb.install.tmp.dir"/>
+        
+    </target>
 
 </project>
