@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+# ============================================================================
+#
+# Copyright (c) 2007-2010 Integral Technology Solutions Pty Ltd,
+# All Rights Reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE
+# LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# FOR FURTHER INFORMATION PLEASE SEE THE INTEGRAL TECHNOLOGY SOLUTIONS
+# END USER LICENSE AGREEMENT (ELUA).
+#
+# ============================================================================
+
+-->
+
+<project name="example" basedir=".">
+    <target name="config_diff_multiple" description="Command to compare configurations between different environments and email reports">
+        <condition property="report.send.enable">
+            <equals arg1="${config.diff.email.enable}" arg2="true" />
+        </condition>
+        <antcall target="config_diff_single_environment">
+            <param name="config_diff_environment" value="${config.diff.environment.from}"/>
+            <param name="config_diff_property_file" value="${config.diff.environment.from.propertyFile}"/>
+        </antcall>
+        <antcall target="config_diff_single_environment">
+            <param name="config_diff_environment" value="${config.diff.environment.to}"/>
+            <param name="config_diff_property_file" value="${config.diff.environment.to.propertyFile}"/>
+        </antcall>
+        <antcall target="config_diff_multiple_environment">
+            <param name="config_diff_environment" value="${config.diff.environment.from}"/>
+            <param name="config_diff_property_file" value="${ConfigNOW.configuration}"/>
+        </antcall>
+        <tstamp>
+            <format property="time.stamp" pattern="yyyy-MM-dd" />
+        </tstamp>
+        <antcall target="copy_report">
+            <param name="from_file" value="${config.diff.report.location}/${config.diff.report.filename}.html"/>
+            <param name="to_file" value="${config.diff.report.location}/${config.diff.report.filename}-${time.stamp}.html"/>
+        </antcall>
+        <echo message="Send email is set to ${config.diff.email.enable}" />
+        <antcall target="send_results">
+            <param name="mailhost" value="${config.diff.email.host}"/>
+            <param name="mailport" value="${config.diff.email.port}"/>
+            <param name="from_environment" value="${config.diff.environment.from}"/>
+            <param name="to_environment" value="${config.diff.environment.to}"/>
+            <param name="from_address" value="${config.diff.email.from}"/>
+            <param name="to_address" value="${config.diff.email.to}"/>
+            <param name="report_location" value="${config.diff.report.location}"/>
+            <param name="report_filename" value="${config.diff.report.filename}.html"/>
+        </antcall>
+    </target>
+    <target name="config_diff_single" description="Command to compare configurations changes for the same environment and email reports">
+        <condition property="report.send.enable">
+            <equals arg1="${config.diff.email.enable}" arg2="true" />
+        </condition>
+        <antcall target="config_diff_single_environment">
+            <param name="config_diff_environment" value="${ConfigNOW.environment}"/>
+            <param name="config_diff_property_file" value="${ConfigNOW.configuration}"/>
+        </antcall>
+        <tstamp>
+            <format property="time.stamp" pattern="yyyy-MM-dd" />
+        </tstamp>
+        <antcall target="copy_report">
+            <param name="from_file" value="${config.diff.report.location}/${config.diff.report.filename}.html"/>
+            <param name="to_file" value="${config.diff.report.location}/${config.diff.report.filename}-${time.stamp}.html"/>
+        </antcall>
+        <echo message="Send email is set to ${config.diff.email.enable}" />
+        <antcall target="send_results">
+            <param name="mailhost" value="${config.diff.email.host}"/>
+            <param name="mailport" value="${config.diff.email.port}"/>
+            <param name="from_environment" value="${ConfigNOW.environment}_current"/>
+            <param name="to_environment" value="${ConfigNOW.environment}_${config.diff_type}"/>
+            <param name="from_address" value="${config.diff.email.from}"/>
+            <param name="to_address" value="${config.diff.email.to}"/>
+            <param name="report_location" value="${config.diff.report.location}"/>
+            <param name="report_filename" value="${config.diff.report.filename}.html"/>
+        </antcall>
+    </target>
+    <target name="config_diff_single_environment">
+        <echo message="Running config_diff_single for environment ${config_diff_environment} with property file ${config_diff_property_file}" />
+        <exec executable="ConfigNOW.sh" dir="${ConfigNOW.home}">
+            <arg line="config_diff ${config_diff_environment} ${config_diff_property_file}" />
+        </exec>
+    </target>
+    <target name="config_diff_multiple_environment">
+        <echo message="Running config_diff_multiple for environment ${config_diff_environment} with property file ${config_diff_property_file}" />
+        <exec executable="ConfigNOW.sh" dir="${ConfigNOW.home}">
+            <arg line="config_diff ${config_diff_environment} ${config_diff_property_file}" />
+        </exec>
+    </target>
+    <target name="send_results" if="report.send.enable">
+        <echo message="Sending results via email" />
+        <mail tolist="${to_address}" mailhost="${mailhost}" mailport="${mailport}" messagemimetype="text/html" subject="Config changes between [${from_environment}] and [${to_environment}]">
+          <from address="${from_address}" />
+          <message></message>
+          <attachments>
+            <fileset dir="${report_location}">
+                <include name="${report_filename}" />
+            </fileset>
+          </attachments>
+        </mail>
+    </target>
+    <target name="copy_report">
+        <echo message="Copy report from ${from_file} to ${to_file}" />
+        <copy overwrite="true" file="${from_file}" tofile="${to_file}" />
+    </target>
+</project>
+
