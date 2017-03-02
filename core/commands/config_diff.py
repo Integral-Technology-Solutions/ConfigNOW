@@ -71,7 +71,7 @@ def diff_multiple_environments(config):
     repodir = config.getProperty('ConfigNOW.home') + '/repository/'
     from_environment = config.getProperty('config.diff.environment.from')
     to_environment = config.getProperty('config.diff.environment.to')
-    report_file = config.getProperty('config.diff.report.location') + '/' + config.getProperty('config.diff.report.filename')
+    report_file = config.getProperty('config.diff.report.location') + '/' + config.getProperty('config.diff.report.filename') + '.html'
     template_file = config.getProperty('ConfigNOW.home') + '/repository/template/report.html'
     current_config = repodir + from_environment + '/' + config.getProperty('config.diff.environment.from.propertyFile') + '/previous/MBeans.txt'
     base_config = repodir + to_environment + '/' + config.getProperty('config.diff.environment.to.propertyFile') + '/previous/MBeans.txt'
@@ -403,4 +403,3 @@ def walkTree(currentDir,currLevel):
         # We don't follow things that can be targeted as they can lead to recursion
         if "Targets" not in child:
             walkTree(childDirectory,currLevel)
-
