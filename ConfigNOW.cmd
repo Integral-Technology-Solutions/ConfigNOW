@@ -31,3 +31,5 @@ java  -Xms1024m -Xmx1024m -classpath "./jython21.jar;%ConfigNOW_cp%;%classpath%"
 if errorlevel 2 goto set_env
 
 endlocal
+
+
