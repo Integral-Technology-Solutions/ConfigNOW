@@ -600,7 +600,7 @@ try:
                     sys.exit()
         else:
             main_logger.info('Running command ' + command_file + ' as ant target in build file: ' + command_file)
-            if rb_config.size()<=0:                        
+            if arg_count<3:                        
                 print_available_environments()
                 usage()
                 main_logger.error('Command \'' + command_name + '\' requires <environment> <config_file> arguments')
