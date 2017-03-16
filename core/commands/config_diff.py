@@ -403,3 +403,4 @@ def walkTree(currentDir,currLevel):
         # We don't follow things that can be targeted as they can lead to recursion
         if "Targets" not in child:
             walkTree(childDirectory,currLevel)
+
