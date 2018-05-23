@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+e?xml version="1.0" encoding="UTF-8"?>
 
 <!--
 
@@ -25,35 +25,35 @@
 
 <project name="WebLogic Installation">
 
-    <import file="ant-imports.xml"/>
-    
-    <target name="install_weblogic" depends="validate.weblogic.install,check.architecture,populate.silent.xml" description="Install WebLogic">
-    	<chmod file="${wls.install.file}" perm="750"/>
+	<import file="ant-imports.xml"/>
+	
+	<target name="install_weblogic" depends="validate.weblogic.install,check.architecture,populate.silent.xml" description="Install WebLogic">
+		<chmod file="${wls.install.file}" perm="750"/>
 		<echo message="Temporary folder location: ${java.io.tmpdir}" />
 		<if>
-    		<isset property="tmpdir" />
+			<isset property="tmpdir" />
 			<then>
-                <if>
-                    <equals arg1="${wls.version}" arg2="12"/>
-                <then>
-				      <property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.xml} -Djava.io.tmpdir=${tmpdir}" />
-                </then>
-                <else>
-                    <property name="silent.args" value="-mode=silent -silent_xml=${silent.xml} -Djava.io.tmpdir=${tmpdir}"/>
-                </else>
-                </if>
+				<if>
+					<equals arg1="${wls.version}" arg2="12"/>
+				<then>
+					  <property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.xml} -Djava.io.tmpdir=${tmpdir} ${wls.silent.args}" />
+				</then>
+				<else>
+					<property name="silent.args" value="-mode=silent -silent_xml=${silent.xml} -Djava.io.tmpdir=${tmpdir} ${wls.silent.args}"/>
+				</else>
+				</if>
 			</then>
 			<else>
-            <if>
-                    <equals arg1="${wls.version}" arg2="12"/>
-                <then>
+			<if>
+					<equals arg1="${wls.version}" arg2="12"/>
+				<then>
 				<!--<property name="silent.args" value="-mode=silent -silent_xml=${silent.xml}" />-->
-                <property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.xml}"/>
-                </then>
-                <else>
-                    <property name="silent.args" value="-mode=silent -silent_xml=${silent.xml}"/>
-                </else>
-                </if>
+				<property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.xml} ${wls.silent.args}"/>
+				</then>
+				<else>
+					<property name="silent.args" value="-mode=silent -silent_xml=${silent.xml} ${wls.silent.args}"/>
+				</else>
+				</if>
 			</else>
 		</if>
 		<condition property="jar.install">
@@ -90,7 +90,7 @@
 			<isset property="jar.install" />
 			<then>
 				<echo message="Performing install from jar file."/>
-                			
+							
 				<property name="jar.silent.args" value="-jar ${wls.install.file} ${silent.args}" />
 				<echo message="${jar.silent.args}"/>
 				<exec executable="java" failonerror="true" output="${ConfigNOW.home}/ConfigNOW.log"  append="true">
@@ -112,81 +112,81 @@
 						<fail message="WebLogic install failed with following message:${line.separator}${line.separator}${install.output}" status="${install.returncode}"/>
 					</then>
 				</if>
-        	</else>
-        </if>
-        <delete file="${silent.xml}"/>
+			</else>
+		</if>
+		<delete file="${silent.xml}"/>
 		<echo message="================================================"/>
 		<echo message="================================================"/>
 		<echo message="WebLogic Install Finished"/>
 		<echo message="================================================"/>
 		<echo message="================================================"/>
-    </target>
+	</target>
 
-    <target name="validate.weblogic.install">
-        <available file="${wls.install.file}" property="available.wl.install" />
-        <fail unless="available.wl.install">Invalid configuration: ${wls.install.file} is invalid or does not exist.</fail>
-    </target>    
+	<target name="validate.weblogic.install">
+		<available file="${wls.install.file}" property="available.wl.install" />
+		<fail unless="available.wl.install">Invalid configuration: ${wls.install.file} is invalid or does not exist.</fail>
+	</target>	 
 
-    <target name="populate.silent.xml">
-        <condition property="silent.props.exist">
-            <and>
-              <isset property="wls.oracle.home"/>
-              <isset property="wls.name"/>
-            </and>
-        </condition>
-        <!-- Sets the Nodemanager port to 5556 if it has not been previously set -->
-        <property name="wls.nodemanager.port" value="5556" />
+	<target name="populate.silent.xml">
+		<condition property="silent.props.exist">
+			<and>
+			  <isset property="wls.oracle.home"/>
+			  <isset property="wls.name"/>
+			</and>
+		</condition>
+		<!-- Sets the Nodemanager port to 5556 if it has not been previously set -->
+		<property name="wls.nodemanager.port" value="5556" />
 		<mkdir dir="tmp" />
-        <!-- Weblogic 12c changes ... Need to verify version here ... TODO -->
-        <if>
-    		<equals arg1="${wls.version}" arg2="12"/>
-	    <then>
-	    <property name="silent.xml" value="tmp/silent_weblogic.txt" />
-	            <fail unless="silent.props.exist">Could not populate silent_weblogic.xml file - wls.oracle.home and wls.name properties must be set.</fail>
+		<!-- Weblogic 12c changes ... Need to verify version here ... TODO -->
+		<if>
+			<equals arg1="${wls.version}" arg2="12"/>
+		<then>
+		<property name="silent.xml" value="tmp/silent_weblogic.txt" />
+				<fail unless="silent.props.exist">Could not populate silent_weblogic.xml file - wls.oracle.home and wls.name properties must be set.</fail>
 		<copy file="resources/silent_weblogic_12c.txt" tofile="${silent.xml}" overwrite="true" />
 		<echo message="before replacing"/>
-	        <replace file="${silent.xml}">
-                    <replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}"/>
-                </replace>
-            </then>
-            <else>
-            <property name="silent.xml" value="tmp/silent_weblogic.xml" />
-                    <fail unless="silent.props.exist">Could not populate silent_weblogic.xml file - wls.oracle.home and wls.name properties must be set.</fail>
-            	<copy file="resources/silent_weblogic.xml" tofile="${silent.xml}" overwrite="true" />
-            	<replace file="${silent.xml}">
-            	    <replacefilter token="@@BEA_HOME@@" value="${wls.oracle.home}"/>
-            	    <replacefilter token="@@WL_HOME@@" value="${wls.name}"/>
-            	    <replacefilter token="@@NM_PORT@@" value="${wls.nodemanager.port}"/>
-            	</replace>
+			<replace file="${silent.xml}">
+					<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}"/>
+				</replace>
+			</then>
+			<else>
+			<property name="silent.xml" value="tmp/silent_weblogic.xml" />
+					<fail unless="silent.props.exist">Could not populate silent_weblogic.xml file - wls.oracle.home and wls.name properties must be set.</fail>
+				<copy file="resources/silent_weblogic.xml" tofile="${silent.xml}" overwrite="true" />
+				<replace file="${silent.xml}">
+					<replacefilter token="@@BEA_HOME@@" value="${wls.oracle.home}"/>
+					<replacefilter token="@@WL_HOME@@" value="${wls.name}"/>
+					<replacefilter token="@@NM_PORT@@" value="${wls.nodemanager.port}"/>
+				</replace>
 
-            </else>
-        </if>
-    </target>
+			</else>
+		</if>
+	</target>
 
 	<!-- solution sourced from http://stackoverflow.com/questions/218989/how-to-determine-build-architecture-32bit-64bit-with-ant -->
 	<!-- modified to use propertyregexp, to allow Ant 1.6 support -->
-    <target name="check.architecture" depends="check.family,check.register"/>
+	<target name="check.architecture" depends="check.family,check.register"/>
 
-    <target name="check.family" >
-        <condition property="os-family" value="unix" else="windows">
-            <os family="unix" />
-        </condition>
+	<target name="check.family" >
+		<condition property="os-family" value="unix" else="windows">
+			<os family="unix" />
+		</condition>
 
-        <condition property="unix">
-            <os family="unix"/>
-        </condition>
-    </target>
+		<condition property="unix">
+			<os family="unix"/>
+		</condition>
+	</target>
 
 	<target name="check.register" depends="reg.unix,reg.windows">
-        <echo message="Detected register size: ${register-size}"/>
-        <echo message="Detected OS Family: ${os-family}"/>
-    </target>
+		<echo message="Detected register size: ${register-size}"/>
+		<echo message="Detected OS Family: ${os-family}"/>
+	</target>
 
-    <!-- Test under GNU/Linux -->
-    <target name="reg.unix" if="unix">
-        <exec dir="." executable="uname" outputproperty="result">
-            <arg line="-m"/>
-        </exec>
+	<!-- Test under GNU/Linux -->
+	<target name="reg.unix" if="unix">
+		<exec dir="." executable="uname" outputproperty="result">
+			<arg line="-m"/>
+		</exec>
 
 		<!-- String ends in "64" -->
 		<propertyregex property="register-size"
@@ -202,14 +202,14 @@
 				<isset property="register-size"/>
 			</not>
 		</condition>
-    </target>
+	</target>
 
-    <!-- Test under MS/Windows-->
-    <target name="reg.windows" unless="unix">
-        <!-- 64 bit Windows versions have the variable "ProgramFiles(x86)" -->
-        <exec dir="." executable="cmd" outputproperty="result">
-            <arg line="/c SET ProgramFiles(x86)"/>
-        </exec>
+	<!-- Test under MS/Windows-->
+	<target name="reg.windows" unless="unix">
+		<!-- 64 bit Windows versions have the variable "ProgramFiles(x86)" -->
+		<exec dir="." executable="cmd" outputproperty="result">
+			<arg line="/c SET ProgramFiles(x86)"/>
+		</exec>
 
 		<!-- String ends in "Program Files (x86)" -->
 		<propertyregex property="register-size"
@@ -218,6 +218,6 @@
 				select="64"
 				defaultValue="32"
 				casesensitive="true"/>
-    </target>
+	</target>
 
 </project>
