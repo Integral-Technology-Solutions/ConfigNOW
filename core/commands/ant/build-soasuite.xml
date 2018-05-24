@@ -45,6 +45,15 @@
 	<target name="install_soa_suite_12c" depends="validate.soa.suite.12c.install, populate.soa.suite.12c.rsp, unzip.12c.install.files" description="Install SOA Suite 12c">
 		<property name="silent.rsp" value="tmp/silent_soa_12c.txt" />
 		<property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp} ${wls.silent.args}"/>
+
+		<!-- If infra install file set then invoke target -->
+		<if>
+			<isset property="fmw.install.file"/>
+			<then>
+				<echo message="Installing SOA Suite Infra first" />
+				<antcall target="install_fmw_infra"/>
+			</then>
+		</if>
 		
 		
 		<echo message="Installing SOA Suite with the following settings:"/>
