@@ -102,13 +102,15 @@
 		<antcall target="remove.soa.install.tmp.dir"/>
 	</target>
 	<target name="install_fmw_infra" depends="validate.fmw.install, populate.fmw.rsp" description="Install FMW 12c infrastructure">
-		<property name="silent.rsp" value="tmp/silent_fmw_infra_12c.txt" />
-		<property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp} ${wls.silent.args}"/>
+		<property name="silent.infra.rsp" value="tmp/silent_fmw_infra_12c.txt" />
+		<property name="silent.infra.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.infra.rsp} ${wls.silent.args}"/>
 		
 		
 		<echo message="Installing FMW infrastructure with the following settings:"/>
 		<echo message="================================================"/>
 		<echo message="Middleware Home: ${wls.oracle.home}" />
+		<echo message="Response File: ${silent.infra.rsp}" />
+		<echo message="Silent args: ${silent.infra.args}" />
 		<echo message="================================================"/>
 		
 
@@ -120,7 +122,7 @@
 				<equals arg1="${register-size}" arg2="64"/>
 			</and>
 			<then>
-				<property name="jar.silent.args" value="-d64 -jar ${fmw.install.file} ${silent.args}" />
+				<property name="jar.silent.args" value="-d64 -jar ${fmw.install.file} ${silent.infra.args}" />
 			</then>
 		</if>
 		<!-- 32bit Unix installation -->
@@ -130,13 +132,13 @@
 				<equals arg1="${register-size}" arg2="32"/>
 			</and>
 			<then>
-				<property name="jar.silent.args" value="-jar ${fmw.install.file} ${silent.args}" />
+				<property name="jar.silent.args" value="-jar ${fmw.install.file} ${silent.infra.args}" />
 			</then>
 		</if>
 		
 		<echo message="Performing install from jar file ${fmw.install.file}"/>
 				
-				<property name="jar.silent.args" value="-jar ${fmw.install.file} ${silent.args}" />
+				<property name="jar.silent.args" value="-jar ${fmw.install.file} ${silent.infra.args}" />
 				<echo message="${jar.silent.args}"/>
 				
 				<exec executable="java" dir="${wls.oracle.home}" failonerror="true" output="${ConfigNOW.home}/ConfigNOW.log"  append="true">
@@ -145,7 +147,7 @@
 				
 		<available file="${wls.oracle.home}/em" property="infra.home.exists" />
 		<fail unless="infra.home.exists">FMW infrastructure Install Failed... ${wls.oracle.home}/em was not created.</fail>   
-		<delete file="${silent.rsp}"/>
+		<delete file="${silent.infra.rsp}"/>
 		<echo message="================================================"/>
 		<echo message="================================================"/>
 		<echo message="FMW INfrasructure Install Finished Successfully"/>
@@ -325,9 +327,11 @@
 			<isset property="wls.oracle.home"/>
 		</condition>
 		<fail unless="soa.suite.12c.silent.props.exist">Could not populate fmw_infrastructure response file - wls.oracle.home property must be set.</fail>
-		<property name="silent.rsp" value="tmp/silent_fmw_infra_12c.txt" />
-		<copy file="resources/silent_fmw_infra_12c.txt" tofile="${silent.rsp}" overwrite="true" />
-		<replace file="${silent.rsp}">
+		<property name="silent.infra.rsp" value="tmp/silent_fmw_infra_12c.txt" />
+		
+		<echo message="Creating infr response file: ${silent.infra.rsp}" />
+		<copy file="resources/silent_fmw_infra_12c.txt" tofile="${silent.infra.rsp}" overwrite="true" />
+		<replace file="${silent.infra.rsp}">
 			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}"/>
 		</replace>
  </target>
