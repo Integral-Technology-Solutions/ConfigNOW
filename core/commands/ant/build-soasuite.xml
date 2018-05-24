@@ -94,7 +94,7 @@
 	</target>
 	<target name="install_fmw_infra" depends="validate.fmw.install, populate.fmw.rsp" description="Install FMW 12c infrastructure">
 		<property name="silent.rsp" value="tmp/silent_fmw_infra_12c.txt" />
-		<property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp}"/>
+		<property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp} ${wls.silent.args}"/>
 		
 		
 		<echo message="Installing FMW infrastructure with the following settings:"/>
