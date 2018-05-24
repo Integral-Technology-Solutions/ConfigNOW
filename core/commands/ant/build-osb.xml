@@ -138,7 +138,7 @@
  		<fail unless="osb.silent.props.exist">Could not populate osb11g.rsp file - wls.oracle.home, osb.name and wls.name properties must be set.</fail>
  		<copy file="resources/osb11g.rsp" tofile="${silent.rsp}" overwrite="true" />
  		<replace file="${silent.rsp}">
- 			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}/${osb.name}"/>
+ 			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}"/>
  			<replacefilter token="@@MW_HOME@@" value="${wls.oracle.home}"/>
  			<replacefilter token="@@WL_HOME@@" value="${wls.oracle.home}/${wls.name}"/>
  		</replace>
@@ -166,7 +166,7 @@
     
     <target name="install_osb12c" depends="validate.osb12c.install, populate.osb12c.rsp" description="Installs OSB 12c">
         <property name="silent.rsp" value="tmp/silent_osb_12c.txt" />
-        <property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp}"/>
+        <property name="silent.args" value="-silent -responseFile ${ConfigNOW.home}/core/commands/ant/${silent.rsp} ${wls.silent.args}"/>
         
         
         <echo message="Installing OSB with the following settings:"/>
