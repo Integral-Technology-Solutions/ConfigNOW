@@ -111,6 +111,9 @@
 		<echo message="Middleware Home: ${wls.oracle.home}" />
 		<echo message="================================================"/>
 		
+
+		<!-- make oracle home if it doesn't exist -->
+		<mkdir dir="${wls.oracle.home}"/>
 		<if>
 			<and>
 				<os family="unix"/>
