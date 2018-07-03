@@ -158,7 +158,7 @@
  		<fail unless="osb.silent.props.exist">Could not populate osb12c.rsp file - wls.oracle.home, osb.name and wls.name properties must be set.</fail>
  		<copy file="resources/osb12c.rsp" tofile="${silent.rsp}" overwrite="true" />
  		<replace file="${silent.rsp}">
- 			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}/${osb.name}"/>
+ 			<replacefilter token="@@ORACLE_HOME@@" value="${wls.oracle.home}/"/>
  			<replacefilter token="@@MW_HOME@@" value="${wls.oracle.home}"/>
  			<replacefilter token="@@WL_HOME@@" value="${wls.oracle.home}/${wls.name}"/>
  		</replace>
